@@ -479,6 +479,10 @@
         <label for="itemTitle">제목</label>
         <input id="itemTitle" required placeholder="예: 콜로세움" />
       </div>
+      <div class="field">
+        <label for="itemDate">날짜</label>
+        <input id="itemDate" type="date" required />
+      </div>
       <div class="field" id="placeField">
         <label for="itemPlace">장소 / 주소</label>
         <input id="itemPlace" placeholder="예: 도시, 명소 주소" />
@@ -864,8 +868,38 @@
     function syncItemFormFields() {
       const type = document.getElementById("itemType").value;
       const isRoute = type === "flight" || type === "train";
-      document.getElementById("routeFields").hidden = !isRoute;
-      document.getElementById("placeField").hidden = isRoute;
+      const routeFields = document.getElementById("routeFields");
+      const placeField = document.getElementById("placeField");
+      routeFields.hidden = !isRoute;
+      placeField.hidden = isRoute;
+      routeFields.style.display = isRoute ? "grid" : "none";
+      placeField.style.display = isRoute ? "none" : "grid";
+    }
+
+    function ensureDayForDate(dateStr) {
+      const trip = activeTrip();
+      if (!dateStr) return activeDay();
+      let day = trip.days.find((d) => d.id === trip.activeDayId);
+      // Prefer keeping current day if it has no date or same date
+      if (day && (!day.date || day.date === dateStr)) {
+        day.date = dateStr;
+        return day;
+      }
+      const existing = trip.days.find((d) => d.date === dateStr);
+      if (existing) {
+        trip.activeDayId = existing.id;
+        return existing;
+      }
+      // Current day empty of items and no date -> reuse
+      if (day && !day.date && day.items.length === 0) {
+        day.date = dateStr;
+        return day;
+      }
+      const n = trip.days.length + 1;
+      day = { id: uid(), label: `Day ${n}`, date: dateStr, items: [] };
+      trip.days.push(day);
+      trip.activeDayId = day.id;
+      return day;
     }
 
     function toast(msg) {
@@ -931,7 +965,14 @@
       if (trip.startDate || trip.endDate) {
         els.dateRangeChip.textContent = `${formatDateLabel(trip.startDate)} – ${formatDateLabel(trip.endDate)}`;
       } else {
-        els.dateRangeChip.textContent = "날짜 미설정";
+        const dayDates = trip.days.map((d) => d.date).filter(Boolean).sort();
+        if (dayDates.length === 1) {
+          els.dateRangeChip.textContent = formatDateLabel(dayDates[0]);
+        } else if (dayDates.length > 1) {
+          els.dateRangeChip.textContent = `${formatDateLabel(dayDates[0])} – ${formatDateLabel(dayDates[dayDates.length - 1])}`;
+        } else {
+          els.dateRangeChip.textContent = "날짜 미설정";
+        }
       }
       els.countChip.textContent = `일정 ${totalItems(trip)}`;
 
@@ -1025,9 +1066,12 @@
 
     function openItemEditor(item) {
       editingItemId = item?.id || null;
+      const trip = activeTrip();
+      const day = activeDay();
       document.getElementById("itemSheetTitle").textContent = item ? "일정 수정" : "일정 추가";
       document.getElementById("itemType").value = item?.type || "place";
       document.getElementById("itemTitle").value = item?.title || "";
+      document.getElementById("itemDate").value = day?.date || trip.startDate || item?.date || "";
       const parsed = item ? parseRoute(item) : null;
       document.getElementById("itemPlace").value = item?.place || "";
       document.getElementById("itemFrom").value = item?.from || parsed?.from || "";
@@ -1039,7 +1083,11 @@
       document.getElementById("itemNote").value = item?.note || "";
       syncItemFormFields();
       openSheet(els.itemSheet);
-      setTimeout(() => document.getElementById("itemTitle").focus(), 220);
+      setTimeout(() => {
+        const dateEl = document.getElementById("itemDate");
+        if (!dateEl.value) dateEl.focus();
+        else document.getElementById("itemTitle").focus();
+      }, 220);
     }
 
     function openTripEditor() {
@@ -1295,8 +1343,13 @@
 
     els.itemForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      const day = activeDay();
-      if (!day) return;
+      const itemDate = document.getElementById("itemDate").value;
+      if (!itemDate) {
+        toast("날짜를 선택해 주세요");
+        document.getElementById("itemDate").focus();
+        return;
+      }
+
       const type = document.getElementById("itemType").value;
       const from = document.getElementById("itemFrom").value.trim();
       const to = document.getElementById("itemTo").value.trim();
@@ -1305,6 +1358,7 @@
         id: editingItemId || uid(),
         type,
         title: document.getElementById("itemTitle").value.trim(),
+        date: itemDate,
         place: type === "flight" || type === "train"
           ? (from && to ? `${from} → ${to}` : place)
           : place,
@@ -1316,15 +1370,27 @@
         mapsQuery: document.getElementById("itemMaps").value.trim(),
         note: document.getElementById("itemNote").value.trim(),
       };
+
       if (!payload.title) return;
+
+      // Move item off old day if editing and changing date
+      if (editingItemId) {
+        for (const d of activeTrip().days) {
+          d.items = d.items.filter((i) => i.id !== editingItemId);
+        }
+      }
+
+      const day = ensureDayForDate(itemDate);
       const idx = day.items.findIndex((i) => i.id === payload.id);
       if (idx >= 0) day.items[idx] = payload;
       else day.items.push(payload);
+
+      syncTripDateRange();
       openItemId = payload.id;
       save();
       closeSheets();
       render();
-      toast(idx >= 0 ? "수정됐어요" : "일정이 추가됐어요");
+      toast(editingItemId ? "수정됐어요" : "일정이 추가됐어요");
     });
 
     els.tripForm.addEventListener("submit", (e) => {
