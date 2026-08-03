@@ -4,18 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f3d4c" />
-  <meta name="description" content="이탈리아 여행 일정 · 비행 · 숙소 · 기차" />
+  <meta name="description" content="나라별 여행 일정 · 비행 · 숙소 · 기차" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Italia" />
-  <meta name="application-name" content="Italia" />
+  <meta name="apple-mobile-web-app-title" content="Trip" />
+  <meta name="application-name" content="Trip" />
   <meta name="format-detection" content="telephone=no" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./icon-180.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
-  <title>Italia · 이탈리아 여행</title>
+  <title>Trip · 여행 일정</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -29,21 +29,18 @@
       --surface: #ffffff;
       --brand: #0f3d4c;
       --brand-2: #1a6b7a;
-      --accent: #c45c26;
       --flight: #2f6fed;
       --hotel: #7a5af8;
       --train: #0f9d8a;
       --place: #c45c26;
       --food: #c23b5e;
       --note: #5b6b75;
-      --ok: #1f8a5b;
       --danger: #c62828;
       --radius: 16px;
       --shadow: 0 10px 30px rgba(19, 37, 44, 0.08);
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
@@ -55,19 +52,15 @@
         linear-gradient(180deg, #e8f1f4 0%, var(--bg) 40%, #e7eef1 100%);
       -webkit-font-smoothing: antialiased;
     }
-
     button, input, select, textarea { font: inherit; color: inherit; }
     button { border: 0; background: none; cursor: pointer; }
     a { color: inherit; }
-
     .app {
       max-width: 480px;
       margin: 0 auto;
       min-height: 100%;
       padding-bottom: calc(96px + var(--safe-bottom));
-      position: relative;
     }
-
     .install-tip {
       display: none;
       margin: 12px 16px 0;
@@ -81,11 +74,7 @@
     }
     .install-tip.show { display: block; }
     .install-tip strong { color: var(--brand); }
-    .install-tip .tip-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
+    .install-tip .tip-actions { display: flex; gap: 8px; margin-top: 10px; }
     .install-tip button {
       padding: 8px 10px;
       border-radius: 10px;
@@ -99,9 +88,8 @@
       color: var(--ink-soft);
       border: 1px solid var(--line);
     }
-
     .hero {
-      padding: calc(28px + var(--safe-top)) 20px 18px;
+      padding: calc(24px + var(--safe-top)) 20px 18px;
       color: #f4fafb;
       background:
         linear-gradient(145deg, rgba(15, 61, 76, 0.96), rgba(26, 107, 122, 0.92)),
@@ -109,40 +97,32 @@
       border-bottom-left-radius: 28px;
       border-bottom-right-radius: 28px;
       box-shadow: 0 18px 40px rgba(15, 61, 76, 0.22);
-      animation: heroIn 0.6s ease both;
     }
-
-    @keyframes heroIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: none; }
+    .app-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(244, 250, 251, 0.7);
+      margin-bottom: 8px;
     }
-
     .brand {
       font-family: "Fraunces", serif;
       font-size: 34px;
       letter-spacing: -0.03em;
-      line-height: 1;
+      line-height: 1.05;
     }
-
     .hero p {
       margin-top: 8px;
       color: rgba(244, 250, 251, 0.82);
       font-size: 14px;
       line-height: 1.45;
-      max-width: 28ch;
+      max-width: 30ch;
     }
-
-    .hero-meta {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 16px;
-    }
-
+    .hero-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
     .chip {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
       padding: 7px 11px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.12);
@@ -150,7 +130,6 @@
       font-size: 12px;
       font-weight: 500;
     }
-
     .toolbar {
       display: flex;
       gap: 8px;
@@ -159,7 +138,6 @@
       scrollbar-width: none;
     }
     .toolbar::-webkit-scrollbar { display: none; }
-
     .tool-btn {
       flex: 0 0 auto;
       padding: 9px 12px;
@@ -171,8 +149,6 @@
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(19, 37, 44, 0.04);
     }
-    .tool-btn:active { transform: scale(0.97); }
-
     .day-tabs {
       display: flex;
       gap: 8px;
@@ -186,7 +162,6 @@
       backdrop-filter: blur(10px);
     }
     .day-tabs::-webkit-scrollbar { display: none; }
-
     .day-tab {
       flex: 0 0 auto;
       min-width: 72px;
@@ -195,30 +170,17 @@
       background: var(--surface);
       border: 1px solid var(--line);
       text-align: center;
-      transition: 0.2s ease;
     }
-    .day-tab strong {
-      display: block;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    .day-tab span {
-      display: block;
-      margin-top: 2px;
-      font-size: 11px;
-      color: var(--muted);
-    }
+    .day-tab strong { display: block; font-size: 13px; font-weight: 700; }
+    .day-tab span { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
     .day-tab.active {
       background: var(--brand);
       border-color: var(--brand);
       color: #fff;
-      transform: translateY(-1px);
       box-shadow: 0 10px 20px rgba(15, 61, 76, 0.2);
     }
     .day-tab.active span { color: rgba(255, 255, 255, 0.75); }
-
     .content { padding: 8px 16px 20px; }
-
     .day-title {
       display: flex;
       justify-content: space-between;
@@ -230,14 +192,7 @@
       font-size: 22px;
       letter-spacing: -0.02em;
     }
-    .day-title span {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 500;
-    }
-
-    .timeline { display: flex; flex-direction: column; gap: 0; }
-
+    .day-title span { font-size: 12px; color: var(--muted); font-weight: 500; }
     .item-wrap { position: relative; padding-left: 28px; }
     .item-wrap::before {
       content: "";
@@ -249,7 +204,6 @@
       background: var(--line);
     }
     .item-wrap:last-child::before { display: none; }
-
     .dot {
       position: absolute;
       left: 0;
@@ -268,7 +222,6 @@
     .dot.place { border-color: var(--place); box-shadow: 0 0 0 4px rgba(196, 92, 38, 0.12); }
     .dot.food { border-color: var(--food); box-shadow: 0 0 0 4px rgba(194, 59, 94, 0.12); }
     .dot.note { border-color: var(--note); box-shadow: 0 0 0 4px rgba(91, 107, 117, 0.12); }
-
     .card {
       background: var(--surface);
       border: 1px solid rgba(215, 226, 231, 0.9);
@@ -276,37 +229,21 @@
       padding: 14px 14px 12px;
       box-shadow: var(--shadow);
       margin-bottom: 10px;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-      animation: rise 0.35s ease both;
     }
     .card.open {
       box-shadow: 0 16px 36px rgba(19, 37, 44, 0.12);
       border-color: rgba(26, 107, 122, 0.28);
     }
-    .card:active { transform: scale(0.995); }
-
-    @keyframes rise {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: none; }
-    }
-
     .card-top {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 8px;
       align-items: start;
     }
-
-    .type-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
+    .type-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
     .badge {
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.02em;
       padding: 3px 8px;
       border-radius: 999px;
       background: #eef3f5;
@@ -318,302 +255,136 @@
     .badge.place { background: #fceee6; color: var(--place); }
     .badge.food { background: #fce8ee; color: var(--food); }
     .badge.note { background: #eef1f3; color: var(--note); }
-
-    .time {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 600;
-    }
-
-    .title {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      line-height: 1.3;
-    }
-    .subtitle {
-      margin-top: 4px;
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.35;
-    }
-
+    .time { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .title { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; }
+    .subtitle { margin-top: 4px; font-size: 13px; color: var(--muted); line-height: 1.35; }
     .chev {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: #f2f6f8;
-      color: var(--muted);
-      transition: transform 0.2s ease;
-      margin-top: 2px;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: #f2f6f8; color: var(--muted);
+      transition: transform 0.2s ease; margin-top: 2px;
     }
     .card.open .chev { transform: rotate(180deg); background: #e5f2f4; color: var(--brand-2); }
-
     .details {
       display: none;
       margin-top: 12px;
       padding-top: 12px;
       border-top: 1px dashed var(--line);
-      animation: fade 0.25s ease;
     }
     .card.open .details { display: block; }
-
-    @keyframes fade {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: none; }
-    }
-
-    .details p {
-      font-size: 13px;
-      color: var(--ink-soft);
-      line-height: 1.5;
-      white-space: pre-wrap;
-    }
-
-    .meta-grid {
-      display: grid;
-      gap: 8px;
-      margin-top: 10px;
-    }
+    .details p { font-size: 13px; color: var(--ink-soft); line-height: 1.5; white-space: pre-wrap; }
+    .meta-grid { display: grid; gap: 8px; margin-top: 10px; }
     .meta {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 12px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      background: #f5f9fa;
+      display: flex; justify-content: space-between; gap: 10px;
+      font-size: 12px; padding: 8px 10px; border-radius: 10px; background: #f5f9fa;
     }
     .meta span:first-child { color: var(--muted); }
     .meta strong { font-weight: 600; text-align: right; }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-height: 38px;
-      padding: 0 12px;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: 600;
-      border: 1px solid transparent;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 38px; padding: 0 12px; border-radius: 12px;
+      font-size: 13px; font-weight: 600; border: 1px solid transparent;
     }
-    .btn-primary {
-      background: var(--brand);
-      color: #fff;
-      flex: 1 1 auto;
-    }
-    .btn-ghost {
-      background: #fff;
-      border-color: var(--line);
-      color: var(--ink-soft);
-    }
-    .btn-danger {
-      background: #fff5f5;
-      color: var(--danger);
-      border-color: #f3d0d0;
-    }
-
+    .btn-primary { background: var(--brand); color: #fff; flex: 1 1 auto; }
+    .btn-ghost { background: #fff; border-color: var(--line); color: var(--ink-soft); }
+    .btn-danger { background: #fff5f5; color: var(--danger); border-color: #f3d0d0; }
     .travel {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: -2px 0 10px 28px;
-      padding: 0 4px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      margin: -2px 0 10px 28px; padding: 0 4px;
+      color: var(--muted); font-size: 12px; font-weight: 600;
     }
     .travel a {
-      color: var(--brand-2);
-      text-decoration: none;
+      color: var(--brand-2); text-decoration: none;
       border-bottom: 1px dashed rgba(26, 107, 122, 0.45);
     }
     .travel-line {
-      flex: 1;
-      height: 1px;
+      flex: 1; height: 1px;
       background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px);
     }
-
     .empty {
-      text-align: center;
-      padding: 48px 20px;
+      text-align: center; padding: 48px 20px;
       background: rgba(255, 255, 255, 0.7);
-      border: 1px dashed var(--line);
-      border-radius: 20px;
+      border: 1px dashed var(--line); border-radius: 20px;
     }
-    .empty h3 {
-      font-family: "Fraunces", serif;
-      font-size: 20px;
-      margin-bottom: 8px;
-    }
-    .empty p {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-      margin-bottom: 16px;
-    }
-
+    .empty h3 { font-family: "Fraunces", serif; font-size: 20px; margin-bottom: 8px; }
+    .empty p { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
     .fab-bar {
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
+      position: fixed; left: 50%; transform: translateX(-50%);
       bottom: calc(16px + var(--safe-bottom));
       width: min(448px, calc(100% - 24px));
-      display: flex;
-      gap: 8px;
-      z-index: 20;
+      display: flex; gap: 8px; z-index: 20;
     }
     .fab {
-      flex: 1;
-      min-height: 52px;
-      border-radius: 16px;
-      background: var(--brand);
-      color: #fff;
-      font-weight: 700;
-      font-size: 15px;
+      flex: 1; min-height: 52px; border-radius: 16px;
+      background: var(--brand); color: #fff;
+      font-weight: 700; font-size: 15px;
       box-shadow: 0 14px 30px rgba(15, 61, 76, 0.28);
     }
     .fab.secondary {
-      flex: 0 0 52px;
-      background: #fff;
-      color: var(--brand);
+      flex: 0 0 52px; background: #fff; color: var(--brand);
       border: 1px solid var(--line);
       box-shadow: 0 10px 24px rgba(19, 37, 44, 0.12);
       font-size: 22px;
     }
-
     .sheet-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(12, 24, 28, 0.45);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-      z-index: 40;
+      position: fixed; inset: 0; background: rgba(12, 24, 28, 0.45);
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index: 40;
     }
-    .sheet-backdrop.show {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
+    .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
     .sheet {
-      position: fixed;
-      left: 50%;
-      bottom: 0;
-      transform: translate(-50%, 110%);
-      width: min(480px, 100%);
-      max-height: min(92vh, 820px);
-      overflow: auto;
-      background: #fff;
-      border-radius: 24px 24px 0 0;
+      position: fixed; left: 50%; bottom: 0; transform: translate(-50%, 110%);
+      width: min(480px, 100%); max-height: min(92vh, 820px); overflow: auto;
+      background: #fff; border-radius: 24px 24px 0 0;
       padding: 14px 16px calc(20px + var(--safe-bottom));
       z-index: 50;
       transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
       box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.18);
     }
     .sheet.show { transform: translate(-50%, 0); }
-
     .sheet-handle {
-      width: 42px;
-      height: 4px;
-      border-radius: 999px;
-      background: #d7e0e4;
-      margin: 0 auto 12px;
+      width: 42px; height: 4px; border-radius: 999px;
+      background: #d7e0e4; margin: 0 auto 12px;
     }
-    .sheet h3 {
-      font-family: "Fraunces", serif;
-      font-size: 22px;
-      margin-bottom: 14px;
-    }
-
+    .sheet h3 { font-family: "Fraunces", serif; font-size: 22px; margin-bottom: 14px; }
     .form { display: grid; gap: 12px; }
     .field { display: grid; gap: 6px; }
-    .field label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
+    .field label { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .field input, .field select, .field textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px; background: #f8fbfc; outline: none;
     }
-    .field input,
-    .field select,
-    .field textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px 12px;
-      background: #f8fbfc;
-      outline: none;
-    }
-    .field input:focus,
-    .field select:focus,
-    .field textarea:focus {
-      border-color: #8eb8c2;
-      background: #fff;
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: #8eb8c2; background: #fff;
       box-shadow: 0 0 0 3px rgba(26, 107, 122, 0.12);
     }
     .field textarea { min-height: 88px; resize: vertical; }
-    .row-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .toast {
-      position: fixed;
-      left: 50%;
-      bottom: calc(84px + var(--safe-bottom));
+      position: fixed; left: 50%; bottom: calc(84px + var(--safe-bottom));
       transform: translateX(-50%) translateY(12px);
-      background: var(--ink);
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 600;
-      opacity: 0;
-      pointer-events: none;
-      transition: 0.25s ease;
-      z-index: 60;
+      background: var(--ink); color: #fff; padding: 10px 14px;
+      border-radius: 999px; font-size: 13px; font-weight: 600;
+      opacity: 0; pointer-events: none; transition: 0.25s ease; z-index: 60;
       white-space: nowrap;
     }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    .menu {
-      display: grid;
-      gap: 8px;
-    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .menu { display: grid; gap: 8px; }
     .menu button {
-      text-align: left;
-      padding: 14px 14px;
-      border-radius: 14px;
-      background: #f5f9fa;
-      font-weight: 600;
-      font-size: 14px;
+      text-align: left; padding: 14px; border-radius: 14px;
+      background: #f5f9fa; font-weight: 600; font-size: 14px;
     }
     .menu button small {
-      display: block;
-      margin-top: 3px;
-      color: var(--muted);
-      font-weight: 500;
-      font-size: 12px;
+      display: block; margin-top: 3px; color: var(--muted);
+      font-weight: 500; font-size: 12px;
     }
-
+    .menu button.active-trip {
+      background: #e5f2f4; border: 1px solid rgba(26, 107, 122, 0.25);
+    }
     @media (min-width: 520px) {
       body { padding: 18px 0; }
       .app {
-        border-radius: 28px;
-        overflow: clip;
+        border-radius: 28px; overflow: clip;
         box-shadow: 0 24px 60px rgba(19, 37, 44, 0.12);
         background: rgba(255, 255, 255, 0.35);
       }
@@ -623,8 +394,9 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="brand">Italia</div>
-      <p id="tripSubtitle">일정·비행·숙소·기차를 한곳에서. 탭해서 추가하세요.</p>
+      <div class="app-label">Trip</div>
+      <div class="brand" id="tripBrand">새 여행</div>
+      <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
         <span class="chip" id="dateRangeChip">날짜 미설정</span>
         <span class="chip" id="countChip">일정 0</span>
@@ -633,14 +405,14 @@
 
     <div class="install-tip" id="installTip">
       <strong>홈 화면에 추가하기</strong><br />
-      Safari 하단 <b>공유</b> → <b>홈 화면에 추가</b>를 누르면
-      Italia 앱처럼 바로 열 수 있어요.
+      Safari 하단 <b>공유</b> → <b>홈 화면에 추가</b> → 이름은 <b>Trip</b>으로 저장하세요.
       <div class="tip-actions">
         <button type="button" class="ghost" id="dismissTipBtn">닫기</button>
       </div>
     </div>
 
     <div class="toolbar">
+      <button class="tool-btn" type="button" id="tripsBtn">여행 목록</button>
       <button class="tool-btn" type="button" id="editTripBtn">여행 정보</button>
       <button class="tool-btn" type="button" id="addDayBtn">날짜 추가</button>
       <button class="tool-btn" type="button" id="exportBtn">내보내기</button>
@@ -669,7 +441,6 @@
     <div class="sheet-handle"></div>
     <h3 id="itemSheetTitle">일정 추가</h3>
     <form class="form" id="itemForm">
-      <input type="hidden" id="itemId" />
       <div class="field">
         <label for="itemType">유형</label>
         <select id="itemType">
@@ -687,7 +458,7 @@
       </div>
       <div class="field">
         <label for="itemPlace">장소 / 주소</label>
-        <input id="itemPlace" placeholder="예: Piazza del Colosseo, Roma" />
+        <input id="itemPlace" placeholder="예: 도시, 명소 주소" />
       </div>
       <div class="row-2">
         <div class="field">
@@ -723,12 +494,12 @@
     <h3>여행 정보</h3>
     <form class="form" id="tripForm">
       <div class="field">
-        <label for="tripTitle">여행 이름</label>
-        <input id="tripTitle" placeholder="이탈리아 여행" />
+        <label for="tripTitle">나라 / 여행 이름</label>
+        <input id="tripTitle" placeholder="예: 이탈리아, 일본, 스페인" />
       </div>
       <div class="field">
         <label for="tripDesc">한 줄 소개</label>
-        <input id="tripDesc" placeholder="로마 · 피렌체 · 베네치아" />
+        <input id="tripDesc" placeholder="예: 로마 · 피렌체 · 베네치아" />
       </div>
       <div class="row-2">
         <div class="field">
@@ -747,21 +518,30 @@
     </form>
   </div>
 
+  <div class="sheet" id="tripsSheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <h3>여행 목록</h3>
+    <div class="menu" id="tripsList"></div>
+    <div class="actions" style="margin-top:14px">
+      <button class="btn btn-primary" type="button" id="addTripBtn">+ 새 나라 여행</button>
+    </div>
+  </div>
+
   <div class="sheet" id="menuSheet" role="dialog" aria-modal="true">
     <div class="sheet-handle"></div>
     <h3>더보기</h3>
     <div class="menu">
       <button type="button" id="menuAddDay">
         날짜 추가
-        <small>여행 일정을 Day로 나눠 관리</small>
+        <small>현재 여행을 Day로 나눠 관리</small>
       </button>
       <button type="button" id="menuDeleteDay">
         현재 날짜 삭제
         <small>선택한 Day와 그 안의 일정이 삭제됩니다</small>
       </button>
-      <button type="button" id="menuClear">
-        전체 초기화
-        <small>샘플 빈 일정으로 다시 시작</small>
+      <button type="button" id="menuClearTrip">
+        현재 여행 일정 비우기
+        <small>이 나라 여행의 일정만 초기화</small>
       </button>
     </div>
   </div>
@@ -769,33 +549,71 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const STORAGE_KEY = "italia-trip-v1";
+    const STORAGE_KEY = "trip-app-v2";
+    const LEGACY_KEY = "italia-trip-v1";
     const TYPE_LABEL = {
-      flight: "비행기",
-      hotel: "숙박",
-      train: "기차",
-      place: "장소",
-      food: "식사",
-      note: "메모",
+      flight: "비행기", hotel: "숙박", train: "기차",
+      place: "장소", food: "식사", note: "메모",
     };
 
-    const defaultData = () => ({
-      title: "Italia",
-      subtitle: "일정·비행·숙소·기차를 한곳에서. 탭해서 추가하세요.",
-      startDate: "",
-      endDate: "",
-      activeDayId: null,
-      days: [
-        {
-          id: uid(),
-          label: "Day 1",
-          date: "",
-          items: [],
-        },
-      ],
-    });
+    function uid() {
+      return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    }
 
-    let state = load();
+    function blankTrip(title = "새 여행") {
+      const dayId = uid();
+      return {
+        id: uid(),
+        title,
+        subtitle: "일정·비행·숙소·기차를 한곳에서.",
+        startDate: "",
+        endDate: "",
+        activeDayId: dayId,
+        days: [{ id: dayId, label: "Day 1", date: "", items: [] }],
+      };
+    }
+
+    function defaultStore() {
+      const trip = blankTrip("이탈리아");
+      return { version: 2, activeTripId: trip.id, trips: [trip] };
+    }
+
+    function migrate(raw) {
+      if (!raw) return defaultStore();
+      if (raw.version === 2 && Array.isArray(raw.trips) && raw.trips.length) {
+        if (!raw.activeTripId) raw.activeTripId = raw.trips[0].id;
+        return raw;
+      }
+      if (raw.days) {
+        const trip = {
+          id: uid(),
+          title: raw.title && raw.title !== "Italia" ? raw.title : "이탈리아",
+          subtitle: raw.subtitle || "일정·비행·숙소·기차를 한곳에서.",
+          startDate: raw.startDate || "",
+          endDate: raw.endDate || "",
+          activeDayId: raw.activeDayId || raw.days[0]?.id || null,
+          days: raw.days,
+        };
+        return { version: 2, activeTripId: trip.id, trips: [trip] };
+      }
+      return defaultStore();
+    }
+
+    function load() {
+      try {
+        const v2 = localStorage.getItem(STORAGE_KEY);
+        if (v2) return migrate(JSON.parse(v2));
+        const v1 = localStorage.getItem(LEGACY_KEY);
+        if (v1) {
+          const migrated = migrate(JSON.parse(v1));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+          return migrated;
+        }
+      } catch {}
+      return defaultStore();
+    }
+
+    let store = load();
     let openItemId = null;
     let editingItemId = null;
 
@@ -804,46 +622,37 @@
       timeline: document.getElementById("timeline"),
       dayHeading: document.getElementById("dayHeading"),
       dayCount: document.getElementById("dayCount"),
+      tripBrand: document.getElementById("tripBrand"),
       tripSubtitle: document.getElementById("tripSubtitle"),
       dateRangeChip: document.getElementById("dateRangeChip"),
       countChip: document.getElementById("countChip"),
       backdrop: document.getElementById("backdrop"),
       itemSheet: document.getElementById("itemSheet"),
       tripSheet: document.getElementById("tripSheet"),
+      tripsSheet: document.getElementById("tripsSheet"),
       menuSheet: document.getElementById("menuSheet"),
+      tripsList: document.getElementById("tripsList"),
       itemForm: document.getElementById("itemForm"),
       tripForm: document.getElementById("tripForm"),
       toast: document.getElementById("toast"),
       importFile: document.getElementById("importFile"),
     };
 
-    function uid() {
-      return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-    }
-
-    function load() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return defaultData();
-        const parsed = JSON.parse(raw);
-        if (!parsed.days?.length) return defaultData();
-        if (!parsed.activeDayId) parsed.activeDayId = parsed.days[0].id;
-        return parsed;
-      } catch {
-        return defaultData();
-      }
-    }
-
     function save() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    }
+
+    function activeTrip() {
+      return store.trips.find((t) => t.id === store.activeTripId) || store.trips[0];
     }
 
     function activeDay() {
-      return state.days.find((d) => d.id === state.activeDayId) || state.days[0];
+      const trip = activeTrip();
+      return trip.days.find((d) => d.id === trip.activeDayId) || trip.days[0];
     }
 
-    function totalItems() {
-      return state.days.reduce((n, d) => n + d.items.length, 0);
+    function totalItems(trip = activeTrip()) {
+      return trip.days.reduce((n, d) => n + d.items.length, 0);
     }
 
     function formatDateLabel(dateStr) {
@@ -875,7 +684,7 @@
     }
 
     function closeSheets() {
-      [els.itemSheet, els.tripSheet, els.menuSheet].forEach((s) => s.classList.remove("show"));
+      [els.itemSheet, els.tripSheet, els.tripsSheet, els.menuSheet].forEach((s) => s.classList.remove("show"));
       els.backdrop.classList.remove("show");
     }
 
@@ -885,25 +694,57 @@
       sheet.classList.add("show");
     }
 
+    function escapeHtml(str) {
+      return String(str || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function renderTripsList() {
+      els.tripsList.innerHTML = store.trips
+        .map((trip) => {
+          const active = trip.id === store.activeTripId ? "active-trip" : "";
+          return `
+            <button type="button" class="${active}" data-switch="${trip.id}">
+              ${escapeHtml(trip.title || "새 여행")}
+              <small>${formatDateLabel(trip.startDate)} · 일정 ${totalItems(trip)}개</small>
+            </button>
+            ${
+              store.trips.length > 1
+                ? `<button type="button" data-delete-trip="${trip.id}" style="color:var(--danger)">
+                    ${escapeHtml(trip.title || "여행")} 삭제
+                    <small>이 나라 여행과 일정이 모두 삭제됩니다</small>
+                  </button>`
+                : ""
+            }
+          `;
+        })
+        .join("");
+    }
+
     function render() {
-      if (!state.activeDayId || !state.days.some((d) => d.id === state.activeDayId)) {
-        state.activeDayId = state.days[0]?.id || null;
+      const trip = activeTrip();
+      if (!trip) return;
+      if (!trip.activeDayId || !trip.days.some((d) => d.id === trip.activeDayId)) {
+        trip.activeDayId = trip.days[0]?.id || null;
       }
 
-      document.title = `${state.title || "Italia"} · 이탈리아 여행`;
-      document.querySelector(".brand").textContent = state.title || "Italia";
-      els.tripSubtitle.textContent = state.subtitle || "";
+      document.title = `${trip.title || "Trip"} · Trip`;
+      els.tripBrand.textContent = trip.title || "새 여행";
+      els.tripSubtitle.textContent = trip.subtitle || "";
 
-      if (state.startDate || state.endDate) {
-        els.dateRangeChip.textContent = `${formatDateLabel(state.startDate)} – ${formatDateLabel(state.endDate)}`;
+      if (trip.startDate || trip.endDate) {
+        els.dateRangeChip.textContent = `${formatDateLabel(trip.startDate)} – ${formatDateLabel(trip.endDate)}`;
       } else {
         els.dateRangeChip.textContent = "날짜 미설정";
       }
-      els.countChip.textContent = `일정 ${totalItems()}`;
+      els.countChip.textContent = `일정 ${totalItems(trip)}`;
 
-      els.dayTabs.innerHTML = state.days
+      els.dayTabs.innerHTML = trip.days
         .map((day, idx) => {
-          const active = day.id === state.activeDayId ? "active" : "";
+          const active = day.id === trip.activeDayId ? "active" : "";
           return `
             <button class="day-tab ${active}" type="button" data-day="${day.id}">
               <strong>${day.label || `Day ${idx + 1}`}</strong>
@@ -935,7 +776,6 @@
       }
 
       const sorted = [...day.items].sort((a, b) => (a.start || "99:99").localeCompare(b.start || "99:99"));
-
       els.timeline.innerHTML = sorted
         .map((item, index) => {
           const next = sorted[index + 1];
@@ -943,11 +783,10 @@
           const map = mapsUrl(item);
           const dir = next ? directionsUrl(item, next) : null;
           const travelText = item.travelTime || (next ? "이동시간 미입력" : "");
-
           return `
             <div class="item-wrap">
               <div class="dot ${item.type || "place"}"></div>
-              <article class="card ${isOpen ? "open" : ""}" data-id="${item.id}" style="animation-delay:${index * 40}ms">
+              <article class="card ${isOpen ? "open" : ""}" data-id="${item.id}">
                 <div class="card-top">
                   <div>
                     <div class="type-row">
@@ -988,18 +827,9 @@
         .join("");
     }
 
-    function escapeHtml(str) {
-      return String(str || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;");
-    }
-
     function openItemEditor(item) {
       editingItemId = item?.id || null;
       document.getElementById("itemSheetTitle").textContent = item ? "일정 수정" : "일정 추가";
-      document.getElementById("itemId").value = item?.id || "";
       document.getElementById("itemType").value = item?.type || "place";
       document.getElementById("itemTitle").value = item?.title || "";
       document.getElementById("itemPlace").value = item?.place || "";
@@ -1013,48 +843,85 @@
     }
 
     function openTripEditor() {
-      document.getElementById("tripTitle").value = state.title || "";
-      document.getElementById("tripDesc").value = state.subtitle || "";
-      document.getElementById("tripStart").value = state.startDate || "";
-      document.getElementById("tripEnd").value = state.endDate || "";
+      const trip = activeTrip();
+      document.getElementById("tripTitle").value = trip.title || "";
+      document.getElementById("tripDesc").value = trip.subtitle || "";
+      document.getElementById("tripStart").value = trip.startDate || "";
+      document.getElementById("tripEnd").value = trip.endDate || "";
       openSheet(els.tripSheet);
     }
 
+    function openTripsSheet() {
+      renderTripsList();
+      openSheet(els.tripsSheet);
+    }
+
     function addDay() {
-      const n = state.days.length + 1;
+      const trip = activeTrip();
+      const n = trip.days.length + 1;
       let date = "";
-      if (state.startDate) {
-        const base = new Date(state.startDate + "T00:00:00");
+      if (trip.startDate) {
+        const base = new Date(trip.startDate + "T00:00:00");
         base.setDate(base.getDate() + (n - 1));
         date = base.toISOString().slice(0, 10);
       }
       const day = { id: uid(), label: `Day ${n}`, date, items: [] };
-      state.days.push(day);
-      state.activeDayId = day.id;
+      trip.days.push(day);
+      trip.activeDayId = day.id;
       save();
       render();
       toast("날짜가 추가됐어요");
     }
 
     function deleteActiveDay() {
-      if (state.days.length <= 1) {
+      const trip = activeTrip();
+      if (trip.days.length <= 1) {
         toast("최소 1개의 날짜가 필요해요");
         return;
       }
       if (!confirm("현재 날짜와 일정을 삭제할까요?")) return;
-      const id = state.activeDayId;
-      state.days = state.days.filter((d) => d.id !== id);
-      state.activeDayId = state.days[0].id;
+      trip.days = trip.days.filter((d) => d.id !== trip.activeDayId);
+      trip.activeDayId = trip.days[0].id;
       save();
       render();
       toast("날짜를 삭제했어요");
     }
 
+    function addTrip() {
+      const name = prompt("나라 / 여행 이름을 입력하세요", "일본");
+      if (name === null) return;
+      const trip = blankTrip(name.trim() || "새 여행");
+      store.trips.push(trip);
+      store.activeTripId = trip.id;
+      openItemId = null;
+      save();
+      closeSheets();
+      render();
+      toast("새 여행이 추가됐어요");
+    }
+
+    function deleteTrip(id) {
+      if (store.trips.length <= 1) {
+        toast("최소 1개의 여행이 필요해요");
+        return;
+      }
+      const trip = store.trips.find((t) => t.id === id);
+      if (!confirm(`"${trip?.title || "여행"}"을 삭제할까요?`)) return;
+      store.trips = store.trips.filter((t) => t.id !== id);
+      if (store.activeTripId === id) store.activeTripId = store.trips[0].id;
+      openItemId = null;
+      save();
+      renderTripsList();
+      render();
+      toast("여행을 삭제했어요");
+    }
+
     function exportData() {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const trip = activeTrip();
+      const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `italia-trip-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `trip-${(trip.title || "backup").replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
       toast("JSON으로 내보냈어요");
@@ -1065,10 +932,9 @@
       reader.onload = () => {
         try {
           const data = JSON.parse(reader.result);
-          if (!data.days || !Array.isArray(data.days)) throw new Error("invalid");
-          state = data;
-          if (!state.activeDayId) state.activeDayId = state.days[0]?.id || null;
+          store = migrate(data);
           save();
+          openItemId = null;
           render();
           toast("일정을 불러왔어요");
         } catch {
@@ -1078,11 +944,10 @@
       reader.readAsText(file);
     }
 
-    // Events
     els.dayTabs.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-day]");
       if (!btn) return;
-      state.activeDayId = btn.dataset.day;
+      activeTrip().activeDayId = btn.dataset.day;
       openItemId = null;
       save();
       render();
@@ -1093,8 +958,7 @@
       const deleteId = e.target.closest("[data-delete]")?.dataset.delete;
       if (editId) {
         e.stopPropagation();
-        const item = activeDay().items.find((i) => i.id === editId);
-        openItemEditor(item);
+        openItemEditor(activeDay().items.find((i) => i.id === editId));
         return;
       }
       if (deleteId) {
@@ -1115,33 +979,50 @@
       render();
     });
 
+    els.tripsList.addEventListener("click", (e) => {
+      const switchId = e.target.closest("[data-switch]")?.dataset.switch;
+      const deleteId = e.target.closest("[data-delete-trip]")?.dataset.deleteTrip;
+      if (deleteId) {
+        deleteTrip(deleteId);
+        return;
+      }
+      if (switchId) {
+        store.activeTripId = switchId;
+        openItemId = null;
+        save();
+        closeSheets();
+        render();
+        toast("여행을 바꿨어요");
+      }
+    });
+
     document.getElementById("addItemFab").addEventListener("click", () => openItemEditor());
     document.getElementById("menuFab").addEventListener("click", () => openSheet(els.menuSheet));
+    document.getElementById("tripsBtn").addEventListener("click", openTripsSheet);
     document.getElementById("editTripBtn").addEventListener("click", openTripEditor);
     document.getElementById("addDayBtn").addEventListener("click", addDay);
     document.getElementById("exportBtn").addEventListener("click", exportData);
     document.getElementById("importBtn").addEventListener("click", () => els.importFile.click());
+    document.getElementById("addTripBtn").addEventListener("click", addTrip);
     els.importFile.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (file) importData(file);
       e.target.value = "";
     });
 
-    document.getElementById("menuAddDay").addEventListener("click", () => {
-      closeSheets();
-      addDay();
-    });
-    document.getElementById("menuDeleteDay").addEventListener("click", () => {
-      closeSheets();
-      deleteActiveDay();
-    });
-    document.getElementById("menuClear").addEventListener("click", () => {
-      if (!confirm("모든 일정을 지우고 처음부터 시작할까요?")) return;
-      state = defaultData();
+    document.getElementById("menuAddDay").addEventListener("click", () => { closeSheets(); addDay(); });
+    document.getElementById("menuDeleteDay").addEventListener("click", () => { closeSheets(); deleteActiveDay(); });
+    document.getElementById("menuClearTrip").addEventListener("click", () => {
+      if (!confirm("현재 여행의 일정을 모두 지울까요?")) return;
+      const trip = activeTrip();
+      const dayId = uid();
+      trip.days = [{ id: dayId, label: "Day 1", date: trip.startDate || "", items: [] }];
+      trip.activeDayId = dayId;
+      openItemId = null;
       save();
       closeSheets();
       render();
-      toast("초기화됐어요");
+      toast("일정을 비웠어요");
     });
 
     document.getElementById("cancelItemBtn").addEventListener("click", closeSheets);
@@ -1152,7 +1033,6 @@
       e.preventDefault();
       const day = activeDay();
       if (!day) return;
-
       const payload = {
         id: editingItemId || uid(),
         type: document.getElementById("itemType").value,
@@ -1164,13 +1044,10 @@
         mapsQuery: document.getElementById("itemMaps").value.trim(),
         note: document.getElementById("itemNote").value.trim(),
       };
-
       if (!payload.title) return;
-
       const idx = day.items.findIndex((i) => i.id === payload.id);
       if (idx >= 0) day.items[idx] = payload;
       else day.items.push(payload);
-
       openItemId = payload.id;
       save();
       closeSheets();
@@ -1180,21 +1057,20 @@
 
     els.tripForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      state.title = document.getElementById("tripTitle").value.trim() || "Italia";
-      state.subtitle = document.getElementById("tripDesc").value.trim();
-      state.startDate = document.getElementById("tripStart").value;
-      state.endDate = document.getElementById("tripEnd").value;
-
-      if (state.startDate) {
-        state.days.forEach((day, i) => {
+      const trip = activeTrip();
+      trip.title = document.getElementById("tripTitle").value.trim() || "새 여행";
+      trip.subtitle = document.getElementById("tripDesc").value.trim();
+      trip.startDate = document.getElementById("tripStart").value;
+      trip.endDate = document.getElementById("tripEnd").value;
+      if (trip.startDate) {
+        trip.days.forEach((day, i) => {
           if (!day.date) {
-            const d = new Date(state.startDate + "T00:00:00");
+            const d = new Date(trip.startDate + "T00:00:00");
             d.setDate(d.getDate() + i);
             day.date = d.toISOString().slice(0, 10);
           }
         });
       }
-
       save();
       closeSheets();
       render();
@@ -1203,21 +1079,19 @@
 
     render();
 
-    // Home screen tip (iPhone Safari)
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       window.navigator.standalone === true;
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const tipEl = document.getElementById("installTip");
-    if (tipEl && isIos && !isStandalone && localStorage.getItem("italia-hide-tip") !== "1") {
+    if (tipEl && isIos && !isStandalone && localStorage.getItem("trip-hide-tip") !== "1") {
       tipEl.classList.add("show");
     }
     document.getElementById("dismissTipBtn")?.addEventListener("click", () => {
-      localStorage.setItem("italia-hide-tip", "1");
+      localStorage.setItem("trip-hide-tip", "1");
       tipEl?.classList.remove("show");
     });
 
-    // Offline cache when opened via https / local server
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }

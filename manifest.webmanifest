@@ -1,7 +1,7 @@
 {
-  "name": "Italia · 이탈리아 여행",
-  "short_name": "Italia",
-  "description": "이탈리아 여행 일정 · 비행 · 숙소 · 기차",
+  "name": "Trip · 여행 일정",
+  "short_name": "Trip",
+  "description": "나라별 여행 일정 · 비행 · 숙소 · 기차",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
