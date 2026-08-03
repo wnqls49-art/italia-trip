@@ -188,6 +188,7 @@
       display: flex;
       justify-content: space-between;
       align-items: end;
+      gap: 10px;
       margin: 8px 2px 14px;
     }
     .day-title h2 {
@@ -195,7 +196,22 @@
       font-size: 22px;
       letter-spacing: -0.02em;
     }
-    .day-title span { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .day-title-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    .day-title-actions span { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .day-date-btn {
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 700;
+    }
     .item-wrap { position: relative; padding-left: 28px; }
     .item-wrap::before {
       content: "";
@@ -428,7 +444,10 @@
     <main class="content">
       <div class="day-title">
         <h2 id="dayHeading">Day 1</h2>
-        <span id="dayCount">0개 일정</span>
+        <div class="day-title-actions">
+          <span id="dayCount">0개 일정</span>
+          <button class="day-date-btn" type="button" id="editDayDateBtn">날짜 선택</button>
+        </div>
       </div>
       <div class="timeline" id="timeline"></div>
     </main>
@@ -498,6 +517,25 @@
       </div>
       <div class="actions">
         <button class="btn btn-ghost" type="button" id="cancelItemBtn">취소</button>
+        <button class="btn btn-primary" type="submit">저장</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="sheet" id="daySheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <h3 id="daySheetTitle">날짜 선택</h3>
+    <form class="form" id="dayForm">
+      <div class="field">
+        <label for="dayLabel">Day 이름</label>
+        <input id="dayLabel" placeholder="예: Day 1" />
+      </div>
+      <div class="field">
+        <label for="dayDate">날짜</label>
+        <input id="dayDate" type="date" required />
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" id="cancelDayBtn">취소</button>
         <button class="btn btn-primary" type="submit">저장</button>
       </div>
     </form>
@@ -652,13 +690,16 @@
       backdrop: document.getElementById("backdrop"),
       itemSheet: document.getElementById("itemSheet"),
       tripSheet: document.getElementById("tripSheet"),
+      daySheet: document.getElementById("daySheet"),
       tripsSheet: document.getElementById("tripsSheet"),
       menuSheet: document.getElementById("menuSheet"),
       tripsList: document.getElementById("tripsList"),
       itemForm: document.getElementById("itemForm"),
       tripForm: document.getElementById("tripForm"),
+      dayForm: document.getElementById("dayForm"),
       toast: document.getElementById("toast"),
       importFile: document.getElementById("importFile"),
+      editDayDateBtn: document.getElementById("editDayDateBtn"),
     };
 
     function setSyncStatus(text, status) {
@@ -835,7 +876,7 @@
     }
 
     function closeSheets() {
-      [els.itemSheet, els.tripSheet, els.tripsSheet, els.menuSheet].forEach((s) => s.classList.remove("show"));
+      [els.itemSheet, els.tripSheet, els.daySheet, els.tripsSheet, els.menuSheet].forEach((s) => s.classList.remove("show"));
       els.backdrop.classList.remove("show");
       flushPendingRemote();
     }
@@ -914,6 +955,9 @@
 
       els.dayHeading.textContent = day.label || "Day";
       els.dayCount.textContent = `${day.items.length}개 일정`;
+      if (els.editDayDateBtn) {
+        els.editDayDateBtn.textContent = day.date ? formatDateLabel(day.date) : "날짜 선택";
+      }
 
       if (!day.items.length) {
         els.timeline.innerHTML = `
@@ -1012,21 +1056,48 @@
       openSheet(els.tripsSheet);
     }
 
-    function addDay() {
+    let dayEditorMode = "edit"; // edit | add
+
+    function openDayEditor(mode = "edit") {
       const trip = activeTrip();
-      const n = trip.days.length + 1;
-      let date = "";
-      if (trip.startDate) {
-        const base = new Date(trip.startDate + "T00:00:00");
-        base.setDate(base.getDate() + (n - 1));
-        date = base.toISOString().slice(0, 10);
+      dayEditorMode = mode;
+      if (mode === "add") {
+        document.getElementById("daySheetTitle").textContent = "날짜 추가";
+        const n = trip.days.length + 1;
+        document.getElementById("dayLabel").value = `Day ${n}`;
+        let nextDate = "";
+        const lastDated = [...trip.days].reverse().find((d) => d.date);
+        if (lastDated?.date) {
+          const d = new Date(lastDated.date + "T00:00:00");
+          d.setDate(d.getDate() + 1);
+          nextDate = d.toISOString().slice(0, 10);
+        } else if (trip.startDate) {
+          const d = new Date(trip.startDate + "T00:00:00");
+          d.setDate(d.getDate() + trip.days.length);
+          nextDate = d.toISOString().slice(0, 10);
+        }
+        document.getElementById("dayDate").value = nextDate;
+      } else {
+        const day = activeDay();
+        if (!day) return;
+        document.getElementById("daySheetTitle").textContent = "날짜 선택";
+        document.getElementById("dayLabel").value = day.label || "";
+        document.getElementById("dayDate").value = day.date || trip.startDate || "";
       }
-      const day = { id: uid(), label: `Day ${n}`, date, items: [] };
-      trip.days.push(day);
-      trip.activeDayId = day.id;
-      save();
-      render();
-      toast("날짜가 추가됐어요");
+      openSheet(els.daySheet);
+      setTimeout(() => document.getElementById("dayDate").focus(), 220);
+    }
+
+    function syncTripDateRange() {
+      const trip = activeTrip();
+      const dates = trip.days.map((d) => d.date).filter(Boolean).sort();
+      if (!dates.length) return;
+      if (!trip.startDate || dates[0] < trip.startDate) trip.startDate = dates[0];
+      if (!trip.endDate || dates[dates.length - 1] > trip.endDate) trip.endDate = dates[dates.length - 1];
+    }
+
+    function addDay() {
+      openDayEditor("add");
     }
 
     function deleteActiveDay() {
@@ -1153,6 +1224,7 @@
       }
     });
 
+    document.getElementById("editDayDateBtn").addEventListener("click", () => openDayEditor("edit"));
     document.getElementById("addItemFab").addEventListener("click", () => openItemEditor());
     document.getElementById("menuFab").addEventListener("click", () => openSheet(els.menuSheet));
     document.getElementById("tripsBtn").addEventListener("click", openTripsSheet);
@@ -1185,7 +1257,41 @@
 
     document.getElementById("cancelItemBtn").addEventListener("click", closeSheets);
     document.getElementById("cancelTripBtn").addEventListener("click", closeSheets);
+    document.getElementById("cancelDayBtn").addEventListener("click", closeSheets);
     els.backdrop.addEventListener("click", closeSheets);
+
+    els.dayForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const trip = activeTrip();
+      const label = document.getElementById("dayLabel").value.trim() || "Day";
+      const date = document.getElementById("dayDate").value;
+      if (!date) {
+        toast("날짜를 선택해 주세요");
+        return;
+      }
+
+      if (dayEditorMode === "add") {
+        const day = { id: uid(), label, date, items: [] };
+        trip.days.push(day);
+        trip.activeDayId = day.id;
+        syncTripDateRange();
+        save();
+        closeSheets();
+        render();
+        toast("날짜가 추가됐어요");
+        return;
+      }
+
+      const day = activeDay();
+      if (!day) return;
+      day.label = label;
+      day.date = date;
+      syncTripDateRange();
+      save();
+      closeSheets();
+      render();
+      toast("날짜를 저장했어요");
+    });
 
     els.itemForm.addEventListener("submit", (e) => {
       e.preventDefault();
