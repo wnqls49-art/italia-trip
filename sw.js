@@ -1,4 +1,4 @@
-const CACHE = "trip-v4";
+const CACHE = "trip-v5";
 const ASSETS = [
   "./",
   "./index.html",

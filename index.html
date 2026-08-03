@@ -460,9 +460,19 @@
         <label for="itemTitle">제목</label>
         <input id="itemTitle" required placeholder="예: 콜로세움" />
       </div>
-      <div class="field">
+      <div class="field" id="placeField">
         <label for="itemPlace">장소 / 주소</label>
         <input id="itemPlace" placeholder="예: 도시, 명소 주소" />
+      </div>
+      <div id="routeFields" hidden>
+        <div class="field">
+          <label for="itemFrom">출발</label>
+          <input id="itemFrom" placeholder="예: ICN 인천국제공항 T1" />
+        </div>
+        <div class="field">
+          <label for="itemTo">도착</label>
+          <input id="itemTo" placeholder="예: PVG 푸동국제공항 T1" />
+        </div>
       </div>
       <div class="row-2">
         <div class="field">
@@ -479,8 +489,8 @@
         <input id="itemTravel" placeholder="예: 도보 15분 / 지하철 20분" />
       </div>
       <div class="field">
-        <label for="itemMaps">구글맵 검색어 또는 URL</label>
-        <input id="itemMaps" placeholder="장소명 또는 maps.google.com 링크" />
+        <label for="itemMaps">구글맵 URL (선택)</label>
+        <input id="itemMaps" placeholder="비우면 출발→도착으로 자동 길찾기" />
       </div>
       <div class="field">
         <label for="itemNote">메모</label>
@@ -765,18 +775,56 @@
       return d.toLocaleDateString("ko-KR", { month: "short", day: "numeric", weekday: "short" });
     }
 
+    function parseRoute(item) {
+      if (item?.from?.trim() && item?.to?.trim()) {
+        return { from: item.from.trim(), to: item.to.trim() };
+      }
+      const text = String(item?.place || item?.mapsQuery || "").trim();
+      if (!text) return null;
+      const parts = text.split(/\s*(?:->|→|⇒|➜|\/)\s*/).map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) return { from: parts[0], to: parts[parts.length - 1] };
+      return null;
+    }
+
     function mapsUrl(item) {
-      const q = item.mapsQuery || item.place || item.title;
+      const custom = (item.mapsQuery || "").trim();
+      if (/^https?:\/\//i.test(custom)) return custom;
+
+      const route = parseRoute(item);
+      if (route) {
+        return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(route.from)}&destination=${encodeURIComponent(route.to)}`;
+      }
+
+      const q = custom || item.place || item.title;
       if (!q) return null;
-      if (/^https?:\/\//i.test(q)) return q;
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
     }
 
+    function mapsButtonLabel(item) {
+      return parseRoute(item) ? "길찾기 열기" : "구글맵 열기";
+    }
+
+    function itemSubtitle(item) {
+      const route = parseRoute(item);
+      if (route) return `${route.from} → ${route.to}`;
+      return item.place || "";
+    }
+
     function directionsUrl(fromItem, toItem) {
-      const origin = fromItem.mapsQuery || fromItem.place || fromItem.title;
-      const dest = toItem.mapsQuery || toItem.place || toItem.title;
+      const fromRoute = parseRoute(fromItem);
+      const toRoute = parseRoute(toItem);
+      const origin = fromRoute?.to || fromItem.mapsQuery || fromItem.place || fromItem.title;
+      const dest = toRoute?.from || toItem.mapsQuery || toItem.place || toItem.title;
       if (!origin || !dest) return null;
+      if (/^https?:\/\//i.test(origin) || /^https?:\/\//i.test(dest)) return null;
       return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=transit`;
+    }
+
+    function syncItemFormFields() {
+      const type = document.getElementById("itemType").value;
+      const isRoute = type === "flight" || type === "train";
+      document.getElementById("routeFields").hidden = !isRoute;
+      document.getElementById("placeField").hidden = isRoute;
     }
 
     function toast(msg) {
@@ -898,7 +946,7 @@
                       <span class="time">${[item.start, item.end].filter(Boolean).join(" – ") || "시간 미정"}</span>
                     </div>
                     <div class="title">${escapeHtml(item.title)}</div>
-                    ${item.place ? `<div class="subtitle">${escapeHtml(item.place)}</div>` : ""}
+                    ${itemSubtitle(item) ? `<div class="subtitle">${escapeHtml(itemSubtitle(item))}</div>` : ""}
                   </div>
                   <div class="chev" aria-hidden="true">▾</div>
                 </div>
@@ -906,10 +954,10 @@
                   ${item.note ? `<p>${escapeHtml(item.note)}</p>` : `<p style="color:var(--muted)">메모 없음</p>`}
                   <div class="meta-grid">
                     ${item.travelTime ? `<div class="meta"><span>다음까지</span><strong>${escapeHtml(item.travelTime)}</strong></div>` : ""}
-                    ${item.place ? `<div class="meta"><span>장소</span><strong>${escapeHtml(item.place)}</strong></div>` : ""}
+                    ${itemSubtitle(item) ? `<div class="meta"><span>${parseRoute(item) ? "구간" : "장소"}</span><strong>${escapeHtml(itemSubtitle(item))}</strong></div>` : ""}
                   </div>
                   <div class="actions">
-                    ${map ? `<a class="btn btn-primary" href="${map}" target="_blank" rel="noopener">구글맵 열기</a>` : ""}
+                    ${map ? `<a class="btn btn-primary" href="${map}" target="_blank" rel="noopener">${mapsButtonLabel(item)}</a>` : ""}
                     ${dir ? `<a class="btn btn-ghost" href="${dir}" target="_blank" rel="noopener">다음 장소 동선</a>` : ""}
                     <button class="btn btn-ghost" type="button" data-edit="${item.id}">수정</button>
                     <button class="btn btn-danger" type="button" data-delete="${item.id}">삭제</button>
@@ -936,12 +984,16 @@
       document.getElementById("itemSheetTitle").textContent = item ? "일정 수정" : "일정 추가";
       document.getElementById("itemType").value = item?.type || "place";
       document.getElementById("itemTitle").value = item?.title || "";
+      const parsed = item ? parseRoute(item) : null;
       document.getElementById("itemPlace").value = item?.place || "";
+      document.getElementById("itemFrom").value = item?.from || parsed?.from || "";
+      document.getElementById("itemTo").value = item?.to || parsed?.to || "";
       document.getElementById("itemStart").value = item?.start || "";
       document.getElementById("itemEnd").value = item?.end || "";
       document.getElementById("itemTravel").value = item?.travelTime || "";
       document.getElementById("itemMaps").value = item?.mapsQuery || "";
       document.getElementById("itemNote").value = item?.note || "";
+      syncItemFormFields();
       openSheet(els.itemSheet);
       setTimeout(() => document.getElementById("itemTitle").focus(), 220);
     }
@@ -1109,6 +1161,7 @@
     document.getElementById("exportBtn").addEventListener("click", exportData);
     document.getElementById("importBtn").addEventListener("click", () => els.importFile.click());
     document.getElementById("addTripBtn").addEventListener("click", addTrip);
+    document.getElementById("itemType").addEventListener("change", syncItemFormFields);
     els.importFile.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (file) importData(file);
@@ -1138,11 +1191,19 @@
       e.preventDefault();
       const day = activeDay();
       if (!day) return;
+      const type = document.getElementById("itemType").value;
+      const from = document.getElementById("itemFrom").value.trim();
+      const to = document.getElementById("itemTo").value.trim();
+      const place = document.getElementById("itemPlace").value.trim();
       const payload = {
         id: editingItemId || uid(),
-        type: document.getElementById("itemType").value,
+        type,
         title: document.getElementById("itemTitle").value.trim(),
-        place: document.getElementById("itemPlace").value.trim(),
+        place: type === "flight" || type === "train"
+          ? (from && to ? `${from} → ${to}` : place)
+          : place,
+        from: type === "flight" || type === "train" ? from : "",
+        to: type === "flight" || type === "train" ? to : "",
         start: document.getElementById("itemStart").value,
         end: document.getElementById("itemEnd").value,
         travelTime: document.getElementById("itemTravel").value.trim(),
