@@ -130,6 +130,9 @@
       font-size: 12px;
       font-weight: 500;
     }
+    #syncChip[data-status="ok"] { background: rgba(31, 138, 91, 0.28); }
+    #syncChip[data-status="pending"] { background: rgba(196, 148, 38, 0.3); }
+    #syncChip[data-status="err"] { background: rgba(198, 40, 40, 0.28); }
     .toolbar {
       display: flex;
       gap: 8px;
@@ -398,6 +401,7 @@
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
+        <span class="chip" id="syncChip" data-status="pending">동기화 준비</span>
         <span class="chip" id="dateRangeChip">날짜 미설정</span>
         <span class="chip" id="countChip">일정 0</span>
       </div>
@@ -551,6 +555,10 @@
   <script>
     const STORAGE_KEY = "trip-app-v2";
     const LEGACY_KEY = "italia-trip-v1";
+    const SYNC = {
+      endpoint: "https://mantledb.sh/v2/trip-wnqls49-art/store",
+      key: "dbea48b90b96571441424588668e970108ef267729c364dc30d497cdfcbaa09c",
+    };
     const TYPE_LABEL = {
       flight: "비행기", hotel: "숙박", train: "기차",
       place: "장소", food: "식사", note: "메모",
@@ -575,13 +583,14 @@
 
     function defaultStore() {
       const trip = blankTrip("이탈리아");
-      return { version: 2, activeTripId: trip.id, trips: [trip] };
+      return { version: 2, updatedAt: Date.now(), activeTripId: trip.id, trips: [trip] };
     }
 
     function migrate(raw) {
       if (!raw) return defaultStore();
       if (raw.version === 2 && Array.isArray(raw.trips) && raw.trips.length) {
         if (!raw.activeTripId) raw.activeTripId = raw.trips[0].id;
+        if (!raw.updatedAt) raw.updatedAt = Date.now();
         return raw;
       }
       if (raw.days) {
@@ -594,12 +603,12 @@
           activeDayId: raw.activeDayId || raw.days[0]?.id || null,
           days: raw.days,
         };
-        return { version: 2, activeTripId: trip.id, trips: [trip] };
+        return { version: 2, updatedAt: raw.updatedAt || Date.now(), activeTripId: trip.id, trips: [trip] };
       }
       return defaultStore();
     }
 
-    function load() {
+    function loadLocal() {
       try {
         const v2 = localStorage.getItem(STORAGE_KEY);
         if (v2) return migrate(JSON.parse(v2));
@@ -613,9 +622,12 @@
       return defaultStore();
     }
 
-    let store = load();
+    let store = loadLocal();
     let openItemId = null;
     let editingItemId = null;
+    let pendingRemote = null;
+    let pushTimer = null;
+    let applyingRemote = false;
 
     const els = {
       dayTabs: document.getElementById("dayTabs"),
@@ -626,6 +638,7 @@
       tripSubtitle: document.getElementById("tripSubtitle"),
       dateRangeChip: document.getElementById("dateRangeChip"),
       countChip: document.getElementById("countChip"),
+      syncChip: document.getElementById("syncChip"),
       backdrop: document.getElementById("backdrop"),
       itemSheet: document.getElementById("itemSheet"),
       tripSheet: document.getElementById("tripSheet"),
@@ -638,8 +651,98 @@
       importFile: document.getElementById("importFile"),
     };
 
-    function save() {
+    function setSyncStatus(text, status) {
+      if (!els.syncChip) return;
+      els.syncChip.textContent = text;
+      els.syncChip.dataset.status = status;
+    }
+
+    function persistLocal() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    }
+
+    function save() {
+      if (applyingRemote) {
+        persistLocal();
+        return;
+      }
+      store.updatedAt = Date.now();
+      persistLocal();
+      schedulePush();
+    }
+
+    function schedulePush() {
+      clearTimeout(pushTimer);
+      setSyncStatus("동기화 중…", "pending");
+      pushTimer = setTimeout(() => {
+        pushRemote().catch(() => setSyncStatus("오프라인 저장", "err"));
+      }, 450);
+    }
+
+    async function pushRemote() {
+      const res = await fetch(SYNC.endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Mantle-Key": SYNC.key,
+        },
+        body: JSON.stringify(store),
+      });
+      if (!res.ok) throw new Error("push failed");
+      setSyncStatus("공유 중", "ok");
+    }
+
+    function sheetIsOpen() {
+      return Boolean(document.querySelector(".sheet.show"));
+    }
+
+    function applyRemote(next, { silent } = {}) {
+      if (sheetIsOpen()) {
+        pendingRemote = next;
+        setSyncStatus("새 변경 있음", "pending");
+        return;
+      }
+      applyingRemote = true;
+      store = next;
+      persistLocal();
+      openItemId = null;
+      render();
+      applyingRemote = false;
+      setSyncStatus("공유 중", "ok");
+      if (!silent) toast("다른 기기 변경이 반영됐어요");
+    }
+
+    function flushPendingRemote() {
+      if (!pendingRemote) return;
+      const next = pendingRemote;
+      pendingRemote = null;
+      applyRemote(next);
+    }
+
+    async function pullRemote({ silent } = {}) {
+      try {
+        const res = await fetch(SYNC.endpoint, { cache: "no-store" });
+        if (!res.ok) throw new Error("pull failed");
+        const remoteRaw = await res.json();
+        const remoteEmpty = !remoteRaw?.trips?.length;
+        if (remoteEmpty) {
+          if (!store.updatedAt) store.updatedAt = Date.now();
+          await pushRemote();
+          return;
+        }
+        const remote = migrate(remoteRaw);
+        const remoteAt = Number(remote.updatedAt || 0);
+        const localAt = Number(store.updatedAt || 0);
+        if (remoteAt > localAt) {
+          applyRemote(remote, { silent });
+        } else if (localAt > remoteAt) {
+          await pushRemote();
+        } else {
+          setSyncStatus("공유 중", "ok");
+        }
+      } catch {
+        setSyncStatus("오프라인 저장", "err");
+      }
     }
 
     function activeTrip() {
@@ -686,6 +789,7 @@
     function closeSheets() {
       [els.itemSheet, els.tripSheet, els.tripsSheet, els.menuSheet].forEach((s) => s.classList.remove("show"));
       els.backdrop.classList.remove("show");
+      flushPendingRemote();
     }
 
     function openSheet(sheet) {
@@ -933,6 +1037,7 @@
         try {
           const data = JSON.parse(reader.result);
           store = migrate(data);
+          store.updatedAt = Date.now();
           save();
           openItemId = null;
           render();
@@ -1078,6 +1183,12 @@
     });
 
     render();
+    pullRemote({ silent: true });
+    setInterval(() => pullRemote({ silent: true }), 2500);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") pullRemote({ silent: true });
+    });
+    window.addEventListener("online", () => pullRemote({ silent: true }));
 
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
