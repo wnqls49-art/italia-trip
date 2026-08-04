@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v23</div>
+      <div class="app-label">Trip · v24</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -1222,7 +1222,46 @@
     }
 
     const KO_PLACE_MAP = [
+      // 나라·지역
       [/이탈리아|이태리/gi, "Italy"],
+      [/프랑스/gi, "France"],
+      [/스페인/gi, "Spain"],
+      [/독일/gi, "Germany"],
+      [/영국|잉글랜드/gi, "United Kingdom"],
+      [/스위스/gi, "Switzerland"],
+      [/오스트리아/gi, "Austria"],
+      [/네덜란드|홀란드/gi, "Netherlands"],
+      [/벨기에/gi, "Belgium"],
+      [/포르투갈/gi, "Portugal"],
+      [/그리스/gi, "Greece"],
+      [/터키|튀르키예/gi, "Turkey"],
+      [/미국/gi, "United States"],
+      [/캐나다/gi, "Canada"],
+      [/호주|오스트레일리아/gi, "Australia"],
+      [/일본/gi, "Japan"],
+      [/중국/gi, "China"],
+      [/대만/gi, "Taiwan"],
+      [/홍콩/gi, "Hong Kong"],
+      [/태국/gi, "Thailand"],
+      [/베트남/gi, "Vietnam"],
+      [/싱가포르/gi, "Singapore"],
+      [/말레이시아/gi, "Malaysia"],
+      [/인도네시아/gi, "Indonesia"],
+      [/필리핀/gi, "Philippines"],
+      [/인도/gi, "India"],
+      [/아랍에미리트|아랍에미레이트|UAE/gi, "United Arab Emirates"],
+      [/이집트/gi, "Egypt"],
+      [/모로코/gi, "Morocco"],
+      [/체코/gi, "Czechia"],
+      [/헝가리/gi, "Hungary"],
+      [/폴란드/gi, "Poland"],
+      [/크로아티아/gi, "Croatia"],
+      [/아이슬란드/gi, "Iceland"],
+      [/노르웨이/gi, "Norway"],
+      [/스웨덴/gi, "Sweden"],
+      [/덴마크/gi, "Denmark"],
+      [/핀란드/gi, "Finland"],
+      // 이탈리아
       [/밀라노/gi, "Milano"],
       [/로마/gi, "Roma"],
       [/피렌체/gi, "Firenze"],
@@ -1234,21 +1273,122 @@
       [/토리노|투린/gi, "Torino"],
       [/피사/gi, "Pisa"],
       [/친퀘테레/gi, "Cinque Terre"],
+      [/아말피/gi, "Amalfi"],
+      [/카프리/gi, "Capri"],
+      [/시칠리아/gi, "Sicilia"],
+      [/사르데냐/gi, "Sardegna"],
+      // 유럽 주요 도시
+      [/파리/gi, "Paris"],
+      [/리옹/gi, "Lyon"],
+      [/니스/gi, "Nice"],
+      [/마르세유/gi, "Marseille"],
+      [/런던/gi, "London"],
+      [/에든버러|에딘버러/gi, "Edinburgh"],
+      [/맨체스터/gi, "Manchester"],
+      [/바르셀로나/gi, "Barcelona"],
+      [/마드리드/gi, "Madrid"],
+      [/세비야|세빌리아/gi, "Sevilla"],
+      [/발렌시아/gi, "Valencia"],
+      [/베를린/gi, "Berlin"],
+      [/뮌헨/gi, "Munich"],
+      [/프랑크푸르트/gi, "Frankfurt"],
+      [/함부르크/gi, "Hamburg"],
+      [/암스테르담/gi, "Amsterdam"],
+      [/브뤼셀/gi, "Brussels"],
+      [/취리히/gi, "Zurich"],
+      [/제네바/gi, "Geneva"],
+      [/비엔나|빈\s*공항/gi, "Vienna"],
+      [/프라하/gi, "Prague"],
+      [/부다페스트/gi, "Budapest"],
+      [/바르샤바/gi, "Warsaw"],
+      [/리스본/gi, "Lisbon"],
+      [/포르투/gi, "Porto"],
+      [/아테네/gi, "Athens"],
+      [/산토리니/gi, "Santorini"],
+      [/이스탄불/gi, "Istanbul"],
+      [/두브로브니크/gi, "Dubrovnik"],
+      [/스플리트/gi, "Split"],
+      [/레이캬비크/gi, "Reykjavik"],
+      [/오슬로/gi, "Oslo"],
+      [/스톡홀름/gi, "Stockholm"],
+      [/코펜하겐/gi, "Copenhagen"],
+      [/헬싱키/gi, "Helsinki"],
+      [/더블린/gi, "Dublin"],
+      // 아시아
       [/상해|상하이/gi, "Shanghai"],
       [/베이징|북경/gi, "Beijing"],
+      [/광저우/gi, "Guangzhou"],
+      [/선전/gi, "Shenzhen"],
+      [/시안/gi, "Xi'an"],
+      [/항저우/gi, "Hangzhou"],
+      [/청두/gi, "Chengdu"],
+      [/타이베이|대북/gi, "Taipei"],
       [/도쿄|동경/gi, "Tokyo"],
       [/오사카/gi, "Osaka"],
+      [/교토/gi, "Kyoto"],
+      [/후쿠오카/gi, "Fukuoka"],
+      [/삿포로/gi, "Sapporo"],
+      [/나고야/gi, "Nagoya"],
+      [/오키나와/gi, "Okinawa"],
+      [/방콕/gi, "Bangkok"],
+      [/푸켓/gi, "Phuket"],
+      [/치앙마이/gi, "Chiang Mai"],
+      [/하노이/gi, "Hanoi"],
+      [/호치민|사이공/gi, "Ho Chi Minh City"],
+      [/다낭/gi, "Da Nang"],
+      [/쿠알라룸푸르/gi, "Kuala Lumpur"],
+      [/자카르타/gi, "Jakarta"],
+      [/발리/gi, "Bali"],
+      [/세부/gi, "Cebu"],
+      [/마닐라/gi, "Manila"],
+      [/델리|뉴델리/gi, "New Delhi"],
+      [/뭄바이/gi, "Mumbai"],
+      [/두바이/gi, "Dubai"],
+      [/아부다비/gi, "Abu Dhabi"],
+      [/카이로/gi, "Cairo"],
+      [/마라케시/gi, "Marrakech"],
+      // 미주·오세아니아
+      [/뉴욕/gi, "New York"],
+      [/로스앤젤레스|엘에이|\bLA\b/gi, "Los Angeles"],
+      [/샌프란시스코/gi, "San Francisco"],
+      [/라스베이거스|라스베가스/gi, "Las Vegas"],
+      [/시카고/gi, "Chicago"],
+      [/시애틀/gi, "Seattle"],
+      [/보스턴/gi, "Boston"],
+      [/워싱턴/gi, "Washington"],
+      [/마이애미/gi, "Miami"],
+      [/하와이|호놀룰루/gi, "Honolulu"],
+      [/토론토/gi, "Toronto"],
+      [/밴쿠버/gi, "Vancouver"],
+      [/시드니/gi, "Sydney"],
+      [/멜버른/gi, "Melbourne"],
+      // 한국
+      [/서울/gi, "Seoul"],
+      [/부산/gi, "Busan"],
+      [/제주/gi, "Jeju"],
+      [/대구/gi, "Daegu"],
+      [/대전/gi, "Daejeon"],
+      [/광주/gi, "Gwangju"],
       [/인천/gi, "Incheon"],
       [/김포/gi, "Gimpo"],
+      [/김해/gi, "Gimhae"],
       [/푸동/gi, "Pudong"],
-      [/중앙역/gi, "Centrale"],
+      [/홍차오/gi, "Hongqiao"],
+      [/나리타/gi, "Narita"],
+      [/하네다/gi, "Haneda"],
+      [/간사이/gi, "Kansai"],
+      [/히드로/gi, "Heathrow"],
+      [/샤를드골|샤를\s*드\s*골/gi, "Charles de Gaulle"],
       [/테르미니/gi, "Termini"],
       [/공항/gi, "Airport"],
-      [/기차역/gi, "Railway Station"],
+      [/중앙역|기차역/gi, "Station"],
       [/지하철역/gi, "Metro Station"],
       [/호텔/gi, "Hotel"],
       [/성당/gi, "Cathedral"],
-      [/광장/gi, "Piazza"],
+      [/광장/gi, "Square"],
+      [/박물관|미술관/gi, "Museum"],
+      [/궁전|왕궁/gi, "Palace"],
+      [/타워/gi, "Tower"],
     ];
 
     function expandPlaceQuery(raw) {
@@ -1258,39 +1398,64 @@
 
       let latin = q;
       for (const [re, rep] of KO_PLACE_MAP) latin = latin.replace(re, rep);
+      // "서울역" → "Seoul역" 남은 끝자리 역
+      latin = latin.replace(/역$/u, " Station");
       latin = latin.replace(/\s+/g, " ").trim();
       if (latin && latin !== q) variants.add(latin);
 
-      // 흔한 조합 보정
-      if (/밀라노|Milano/i.test(q) && /중앙역|Centrale/i.test(q)) {
+      // 이탈리아 역 조합
+      if (/밀라노|Milano/i.test(q) && /중앙역|Centrale|Station/i.test(q)) {
         variants.add("Milano Centrale");
-        variants.add("Milano Centrale Station");
       }
-      if (/로마|Roma/i.test(q) && /테르미니|Termini|중앙역/i.test(q)) {
+      if (/로마|Roma/i.test(q) && /테르미니|Termini|중앙역|Station/i.test(q)) {
         variants.add("Roma Termini");
       }
-      if (/피렌체|Firenze/i.test(q) && /중앙역|Centrale|SMN/i.test(q)) {
+      if (/피렌체|Firenze/i.test(q) && /중앙역|Centrale|SMN|Station/i.test(q)) {
         variants.add("Firenze Santa Maria Novella");
-        variants.add("Firenze SMN");
       }
-      // 도시 없이 "이탈리아 중앙역"만 검색한 경우
-      if (/중앙역|Centrale/i.test(q + " " + latin) && /Italy|Italia|이탈리아/i.test(q + " " + latin)
-        && !/(밀라노|로마|피렌체|베네치아|Milano|Roma|Firenze|Venezia)/i.test(q)) {
-        variants.add("Milano Centrale");
-        variants.add("Roma Termini");
-        variants.add("Firenze Santa Maria Novella");
+      // 다른 도시 중앙역
+      if (/파리|Paris/i.test(q) && /중앙|역|Station|Gare/i.test(q)) {
+        variants.add("Gare de Lyon Paris");
+        variants.add("Gare du Nord Paris");
+      }
+      if (/런던|London/i.test(q) && /역|Station/i.test(q)) {
+        variants.add("London King's Cross");
+        variants.add("London St Pancras");
+      }
+      if (/서울|Seoul/i.test(q) && /역|Station/i.test(q)) {
+        variants.add("Seoul Station");
       }
 
-      // 여행 이름(이탈리아 등)은 자동으로 붙이지 않음 — 사용자가 직접 입력한 것만 검색
       return [...variants].filter(Boolean);
     }
 
     async function photonSearch(query) {
-      const url = `https://photon.komoot.io/api/?limit=6&q=${encodeURIComponent(query)}`;
+      const url = `https://photon.komoot.io/api/?limit=8&lang=en&q=${encodeURIComponent(query)}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("search failed");
       const data = await res.json();
       return data.features || [];
+    }
+
+    // Open-Meteo: 한글·전 세계 도시/지역 (브라우저 CORS OK). 역·호텔은 Photon이 더 잘 찾음
+    async function openMeteoSearch(query) {
+      const url =
+        `https://geocoding-api.open-meteo.com/v1/search?count=8&language=ko` +
+        `&name=${encodeURIComponent(query)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("meteo failed");
+      const data = await res.json();
+      return (data.results || []).map((r) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [r.longitude, r.latitude] },
+        properties: {
+          name: r.name,
+          city: r.admin2 || r.admin3 || "",
+          state: r.admin1 || "",
+          country: r.country || "",
+          display_name: [r.name, r.admin1, r.country].filter(Boolean).join(", "),
+        },
+      }));
     }
 
     function openMapPicker(side) {
@@ -1303,7 +1468,7 @@
         side === "from" ? "출발지 · 지도에서 선택" : "도착지 · 지도에서 선택";
       document.getElementById("mapSearchInput").value = preset;
       document.getElementById("mapSearchResults").innerHTML =
-        `<div class="place-meta pending">예: 밀라노 중앙역 / Hotel Europa Riva del Garda</div>`;
+        `<div class="place-meta pending">예: 파리, 도쿄, 뉴욕, 밀라노 중앙역</div>`;
 
       [els.tripSheet, els.daySheet, els.tripsSheet, els.menuSheet].forEach((s) => s?.classList.remove("show"));
       els.itemSheet.classList.remove("show");
@@ -1317,9 +1482,23 @@
 
     function formatPhotonLabel(props) {
       const name = props.name || props.street || props.city || "선택한 장소";
-      const parts = [props.street, props.city || props.county, props.state, props.country]
+      const parts = [
+        props.street,
+        props.city || props.county,
+        props.state,
+        props.country,
+      ]
         .filter(Boolean)
         .filter((p, i, arr) => arr.indexOf(p) === i && p !== name);
+      // Nominatim display_name이 더 풍부하면 보조로 사용
+      if (!parts.length && props.display_name) {
+        const rest = String(props.display_name)
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s && s !== name)
+          .slice(0, 3);
+        return { name, detail: rest.join(", ") };
+      }
       return { name, detail: parts.join(", ") };
     }
 
@@ -1328,6 +1507,7 @@
       const out = [];
       for (const f of features) {
         const [lng, lat] = f.geometry?.coordinates || [];
+        if (lat == null || lng == null) continue;
         const key = `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)},${f.properties?.name || ""}`;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -1346,10 +1526,21 @@
       box.innerHTML = `<div class="place-meta pending">검색 중…</div>`;
       try {
         const variants = expandPlaceQuery(q);
-        const chunks = await Promise.all(variants.slice(0, 5).map((v) => photonSearch(v).catch(() => [])));
-        const features = dedupeFeatures(chunks.flat()).slice(0, 10);
+        const primary = variants[0];
+        const latinOnes = variants.filter((v) => v !== primary && !/[가-힣]/.test(v)).slice(0, 2);
+        // 한글 원문 + 영문 변환어를 전 세계 지오코더에 함께 질의
+        const tasks = [
+          openMeteoSearch(primary).catch(() => []),
+          photonSearch(primary).catch(() => []),
+        ];
+        for (const v of latinOnes) {
+          tasks.push(openMeteoSearch(v).catch(() => []));
+          tasks.push(photonSearch(v).catch(() => []));
+        }
+        const chunks = await Promise.all(tasks);
+        const features = dedupeFeatures(chunks.flat()).slice(0, 12);
         if (!features.length) {
-          box.innerHTML = `<div class="place-meta pending">결과가 없어요 · 예: 밀라노 중앙역, Roma Termini</div>`;
+          box.innerHTML = `<div class="place-meta pending">결과가 없어요 · 예: 파리, 도쿄, 뉴욕, 밀라노 중앙역</div>`;
           return;
         }
         box.innerHTML = features
@@ -2009,9 +2200,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v23").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v24").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v23.js");
+        return navigator.serviceWorker.register("./sw.v24.js");
       }).catch(() => {});
     }
   </script>
