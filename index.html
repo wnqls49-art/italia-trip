@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v17</div>
+      <div class="app-label">Trip · v18</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -599,7 +599,7 @@
       <div class="field">
         <label for="mapSearchInput">장소 검색</label>
         <div class="map-search-row">
-          <input id="mapSearchInput" placeholder="예: Hotel Europa Riva del Garda" />
+          <input id="mapSearchInput" placeholder="예: 밀라노 중앙역 / Hotel Europa Riva" />
           <button class="map-pick-btn" type="button" id="mapSearchBtn" style="width:auto;min-width:72px">검색</button>
         </div>
       </div>
@@ -1146,17 +1146,94 @@
       }
     }
 
+    const KO_PLACE_MAP = [
+      [/이탈리아|이태리/gi, "Italy"],
+      [/밀라노/gi, "Milano"],
+      [/로마/gi, "Roma"],
+      [/피렌체/gi, "Firenze"],
+      [/베네치아|베니스/gi, "Venezia"],
+      [/나폴리/gi, "Napoli"],
+      [/리바\s*델\s*가르다|리바델가르다/gi, "Riva del Garda"],
+      [/베로나/gi, "Verona"],
+      [/볼로냐/gi, "Bologna"],
+      [/토리노|투린/gi, "Torino"],
+      [/피사/gi, "Pisa"],
+      [/친퀘테레/gi, "Cinque Terre"],
+      [/상해|상하이/gi, "Shanghai"],
+      [/베이징|북경/gi, "Beijing"],
+      [/도쿄|동경/gi, "Tokyo"],
+      [/오사카/gi, "Osaka"],
+      [/인천/gi, "Incheon"],
+      [/김포/gi, "Gimpo"],
+      [/푸동/gi, "Pudong"],
+      [/중앙역/gi, "Centrale"],
+      [/테르미니/gi, "Termini"],
+      [/공항/gi, "Airport"],
+      [/기차역/gi, "Railway Station"],
+      [/지하철역/gi, "Metro Station"],
+      [/호텔/gi, "Hotel"],
+      [/성당/gi, "Cathedral"],
+      [/광장/gi, "Piazza"],
+    ];
+
+    function expandPlaceQuery(raw) {
+      let q = String(raw || "").trim();
+      if (!q) return [];
+      const variants = new Set([q]);
+
+      let latin = q;
+      for (const [re, rep] of KO_PLACE_MAP) latin = latin.replace(re, rep);
+      latin = latin.replace(/\s+/g, " ").trim();
+      if (latin && latin !== q) variants.add(latin);
+
+      // 흔한 조합 보정
+      if (/밀라노|Milano/i.test(q) && /중앙역|Centrale/i.test(q)) {
+        variants.add("Milano Centrale");
+        variants.add("Milano Centrale Station");
+      }
+      if (/로마|Roma/i.test(q) && /테르미니|Termini|중앙역/i.test(q)) {
+        variants.add("Roma Termini");
+      }
+      if (/피렌체|Firenze/i.test(q) && /중앙역|Centrale|SMN/i.test(q)) {
+        variants.add("Firenze Santa Maria Novella");
+        variants.add("Firenze SMN");
+      }
+
+      const trip = activeTrip();
+      if (trip?.title) {
+        let tripLatin = trip.title;
+        for (const [re, rep] of KO_PLACE_MAP) tripLatin = tripLatin.replace(re, rep);
+        variants.add(`${latin || q} ${tripLatin}`.trim());
+        variants.add(`${latin || q} ${trip.title}`.trim());
+      }
+
+      // 한글만 있고 변환이 거의 안 됐으면 Italy 힌트 추가
+      if (/[가-힣]/.test(q) && latin === q) {
+        variants.add(`${q} Italy`);
+      }
+
+      return [...variants].filter(Boolean);
+    }
+
+    async function photonSearch(query) {
+      const url = `https://photon.komoot.io/api/?limit=6&q=${encodeURIComponent(query)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("search failed");
+      const data = await res.json();
+      return data.features || [];
+    }
+
     function openMapPicker(side) {
       mapPickSide = side;
       const typed = document.getElementById(side === "from" ? "itemFrom" : "itemTo").value.trim();
       const title = document.getElementById("itemTitle").value.trim();
       const trip = activeTrip();
-      const preset = [typed, title, trip?.title].filter(Boolean).join(" ");
+      const preset = typed || [title, trip?.title].filter(Boolean).join(" ");
       document.getElementById("mapPickTitle").textContent =
         side === "from" ? "출발지 · 지도에서 선택" : "도착지 · 지도에서 선택";
       document.getElementById("mapSearchInput").value = preset;
       document.getElementById("mapSearchResults").innerHTML =
-        `<div class="place-meta pending">검색어를 입력하고 검색을 누르세요</div>`;
+        `<div class="place-meta pending">예: 밀라노 중앙역 / Hotel Europa Riva del Garda</div>`;
 
       [els.tripSheet, els.daySheet, els.tripsSheet, els.menuSheet].forEach((s) => s?.classList.remove("show"));
       els.itemSheet.classList.remove("show");
@@ -1176,6 +1253,19 @@
       return { name, detail: parts.join(", ") };
     }
 
+    function dedupeFeatures(features) {
+      const seen = new Set();
+      const out = [];
+      for (const f of features) {
+        const [lng, lat] = f.geometry?.coordinates || [];
+        const key = `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)},${f.properties?.name || ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(f);
+      }
+      return out;
+    }
+
     async function runPlaceSearch() {
       const box = document.getElementById("mapSearchResults");
       const q = document.getElementById("mapSearchInput").value.trim();
@@ -1185,13 +1275,11 @@
       }
       box.innerHTML = `<div class="place-meta pending">검색 중…</div>`;
       try {
-        const url = `https://photon.komoot.io/api/?lang=en&limit=8&q=${encodeURIComponent(q)}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("search failed");
-        const data = await res.json();
-        const features = data.features || [];
+        const variants = expandPlaceQuery(q);
+        const chunks = await Promise.all(variants.slice(0, 5).map((v) => photonSearch(v).catch(() => [])));
+        const features = dedupeFeatures(chunks.flat()).slice(0, 10);
         if (!features.length) {
-          box.innerHTML = `<div class="place-meta pending">결과가 없어요 · 도시 이름을 같이 넣어보세요</div>`;
+          box.innerHTML = `<div class="place-meta pending">결과가 없어요 · 예: 밀라노 중앙역, Roma Termini</div>`;
           return;
         }
         box.innerHTML = features
@@ -1836,9 +1924,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v17").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v18").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v17.js");
+        return navigator.serviceWorker.register("./sw.v18.js");
       }).catch(() => {});
     }
   </script>
