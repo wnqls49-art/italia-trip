@@ -479,24 +479,20 @@
       </div>
       <div class="field" id="titleField">
         <label for="itemTitle">제목</label>
-        <input id="itemTitle" placeholder="예: 콜로세움" />
+        <input id="itemTitle" placeholder="예: 콜로세움 / 호텔 이름" />
       </div>
       <div class="field">
         <label for="itemDate">날짜</label>
         <input id="itemDate" type="date" required />
       </div>
-      <div class="field" id="placeField">
-        <label for="itemPlace">장소 / 주소</label>
-        <input id="itemPlace" placeholder="예: 도시, 명소 주소" />
-      </div>
       <div id="routeFields" class="route-fields">
         <div class="field">
           <label for="itemFrom" id="itemFromLabel">출발지</label>
-          <input id="itemFrom" placeholder="예: ICN 인천국제공항 T1" />
+          <input id="itemFrom" placeholder="예: 이전 장소 / 출발 공항" />
         </div>
         <div class="field">
           <label for="itemTo" id="itemToLabel">도착지</label>
-          <input id="itemTo" placeholder="예: PVG 푸동국제공항 T1" />
+          <input id="itemTo" placeholder="예: 갈 곳 / 도착 공항" />
         </div>
       </div>
       <div class="row-2">
@@ -842,9 +838,9 @@
         return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(route.from)}&destination=${encodeURIComponent(route.to)}`;
       }
 
-      const q = custom || item.place || item.title;
-      if (!q) return null;
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+      const single = (item.to || item.from || item.place || custom || item.title || "").trim();
+      if (!single) return null;
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(single)}`;
     }
 
     function mapsButtonLabel(item) {
@@ -854,50 +850,69 @@
     function itemSubtitle(item) {
       const route = parseRoute(item);
       if (route) return `${route.from} → ${route.to}`;
+      if (item.to && item.from) return `${item.from} → ${item.to}`;
+      if (item.to) return item.to;
+      if (item.from) return item.from;
       return item.place || "";
     }
 
     function directionsUrl(fromItem, toItem) {
       const fromRoute = parseRoute(fromItem);
       const toRoute = parseRoute(toItem);
-      const origin = fromRoute?.to || fromItem.mapsQuery || fromItem.place || fromItem.title;
-      const dest = toRoute?.from || toItem.mapsQuery || toItem.place || toItem.title;
+      const origin = fromRoute?.to || fromItem.to || fromItem.mapsQuery || fromItem.place || fromItem.title;
+      const dest = toRoute?.from || toItem.from || toItem.to || toItem.mapsQuery || toItem.place || toItem.title;
       if (!origin || !dest) return null;
       if (/^https?:\/\//i.test(origin) || /^https?:\/\//i.test(dest)) return null;
       return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=transit`;
     }
 
+    function isTransitType(type) {
+      return type === "flight" || type === "train";
+    }
+
     function syncItemFormFields() {
       const type = document.getElementById("itemType").value;
-      const isRoute = type === "flight" || type === "train";
-      const routeFields = document.getElementById("routeFields");
-      const placeField = document.getElementById("placeField");
+      const transit = isTransitType(type);
       const titleField = document.getElementById("titleField");
       const titleEl = document.getElementById("itemTitle");
-      routeFields.classList.toggle("form-hidden", !isRoute);
-      placeField.classList.toggle("form-hidden", isRoute);
-      titleField.classList.toggle("form-hidden", isRoute);
+      titleField.classList.toggle("form-hidden", transit);
       titleEl.required = false;
-      titleEl.disabled = isRoute;
-      document.getElementById("itemFrom").required = isRoute;
-      document.getElementById("itemTo").required = isRoute;
-      document.getElementById("itemStartLabel").textContent = isRoute ? "출발 시간" : "시작";
-      document.getElementById("itemEndLabel").textContent = isRoute ? "도착 시간" : "종료";
+      titleEl.disabled = transit;
+
+      const fromPh = {
+        flight: "예: ICN 인천국제공항 T1",
+        train: "예: 로마 테르미니역",
+        hotel: "예: 공항 / 이전 장소",
+        place: "예: 호텔 / 이전 장소",
+        food: "예: 관광지 / 이전 장소",
+        note: "예: 출발 위치 (선택)",
+      };
+      const toPh = {
+        flight: "예: PVG 푸동국제공항 T1",
+        train: "예: 피렌체 SMN역",
+        hotel: "예: 숙소 이름 또는 주소",
+        place: "예: 콜로세움",
+        food: "예: 식당 이름 또는 주소",
+        note: "예: 도착 위치 (선택)",
+      };
+      document.getElementById("itemFrom").placeholder = fromPh[type] || fromPh.place;
+      document.getElementById("itemTo").placeholder = toPh[type] || toPh.place;
+      document.getElementById("itemFrom").required = transit;
+      document.getElementById("itemTo").required = transit;
+      document.getElementById("itemStartLabel").textContent = "출발 시간";
+      document.getElementById("itemEndLabel").textContent = "도착 시간";
       document.getElementById("itemFromLabel").textContent = type === "train" ? "출발역" : "출발지";
       document.getElementById("itemToLabel").textContent = type === "train" ? "도착역" : "도착지";
-      if (isRoute) syncRouteTitle();
+      if (transit) syncRouteTitle();
     }
 
     function syncRouteTitle() {
       const type = document.getElementById("itemType").value;
-      if (type !== "flight" && type !== "train") return;
+      if (!isTransitType(type)) return;
       const from = document.getElementById("itemFrom").value.trim();
       const to = document.getElementById("itemTo").value.trim();
       const titleEl = document.getElementById("itemTitle");
-      if (from && to) titleEl.value = `${from} → ${to}`;
-      else if (from) titleEl.value = from;
-      else if (to) titleEl.value = to;
-      else titleEl.value = "";
+      titleEl.value = routeTitle(from, to);
     }
 
     function routeTitle(from, to, fallback = "") {
@@ -1102,9 +1117,13 @@
       document.getElementById("itemTitle").value = item?.title || "";
       document.getElementById("itemDate").value = day?.date || trip.startDate || item?.date || "";
       const parsed = item ? parseRoute(item) : null;
-      document.getElementById("itemPlace").value = item?.place || "";
-      document.getElementById("itemFrom").value = item?.from || parsed?.from || "";
-      document.getElementById("itemTo").value = item?.to || parsed?.to || "";
+      let from = item?.from || parsed?.from || "";
+      let to = item?.to || parsed?.to || "";
+      if (!from && !to && item?.place && !parseRoute(item)) {
+        to = item.place;
+      }
+      document.getElementById("itemFrom").value = from;
+      document.getElementById("itemTo").value = to;
       document.getElementById("itemStart").value = item?.start || "";
       document.getElementById("itemEnd").value = item?.end || "";
       document.getElementById("itemTravel").value = item?.travelTime || "";
@@ -1115,7 +1134,11 @@
       setTimeout(() => {
         const dateEl = document.getElementById("itemDate");
         if (!dateEl.value) dateEl.focus();
-        else document.getElementById("itemTitle").focus();
+        else if (isTransitType(document.getElementById("itemType").value)) {
+          document.getElementById("itemFrom").focus();
+        } else {
+          document.getElementById("itemTitle").focus();
+        }
       }, 220);
     }
 
@@ -1384,38 +1407,43 @@
       const type = document.getElementById("itemType").value;
       const from = document.getElementById("itemFrom").value.trim();
       const to = document.getElementById("itemTo").value.trim();
-      const isRoute = type === "flight" || type === "train";
-      if (isRoute && (!from || !to)) {
+      const transit = isTransitType(type);
+      if (transit && (!from || !to)) {
         toast(type === "flight" ? "출발지와 도착지를 입력해 주세요" : "출발역과 도착역을 입력해 주세요");
         document.getElementById(from ? "itemTo" : "itemFrom").focus();
         return;
       }
-      const place = document.getElementById("itemPlace").value.trim();
-      // disabled title is not submitted; always build title in JS
+      if (!transit && !from && !to) {
+        toast("출발지 또는 도착지를 입력해 주세요");
+        document.getElementById("itemTo").focus();
+        return;
+      }
+
       const titleEl = document.getElementById("itemTitle");
-      if (isRoute) {
+      if (transit) {
         titleEl.disabled = false;
         titleEl.value = routeTitle(from, to);
       }
       const autoTitle = routeTitle(from, to);
+      const manualTitle = titleEl.value.trim();
       const payload = {
         id: editingItemId || uid(),
         type,
-        title: isRoute ? autoTitle : titleEl.value.trim(),
+        title: transit ? autoTitle : (manualTitle || autoTitle || to || from),
         date: itemDate,
-        place: isRoute ? autoTitle : place,
-        from: isRoute ? from : "",
-        to: isRoute ? to : "",
+        place: autoTitle || to || from,
+        from,
+        to,
         start: document.getElementById("itemStart").value,
         end: document.getElementById("itemEnd").value,
         travelTime: document.getElementById("itemTravel").value.trim(),
         mapsQuery: document.getElementById("itemMaps").value.trim(),
         note: document.getElementById("itemNote").value.trim(),
       };
-      if (isRoute) titleEl.disabled = true;
+      if (transit) titleEl.disabled = true;
 
       if (!payload.title) {
-        toast(isRoute ? "출발지와 도착지를 입력해 주세요" : "제목을 입력해 주세요");
+        toast(transit ? "출발지와 도착지를 입력해 주세요" : "제목 또는 도착지를 입력해 주세요");
         return;
       }
 
