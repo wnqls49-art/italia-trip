@@ -152,27 +152,63 @@
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(19, 37, 44, 0.04);
     }
-    .day-tabs {
-      display: flex;
-      gap: 8px;
-      padding: 14px 16px 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
+    .day-tabs-wrap {
       position: sticky;
       top: 0;
       z-index: 5;
-      background: linear-gradient(180deg, rgba(238, 244, 246, 0.96), rgba(238, 244, 246, 0.88));
+      display: grid;
+      grid-template-columns: 36px 1fr 36px;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 8px 4px;
+      background: linear-gradient(180deg, rgba(238, 244, 246, 0.98), rgba(238, 244, 246, 0.9));
       backdrop-filter: blur(10px);
     }
-    .day-tabs::-webkit-scrollbar { display: none; }
+    .day-scroll-btn {
+      width: 36px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--brand);
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+      box-shadow: 0 2px 8px rgba(19, 37, 44, 0.04);
+    }
+    .day-scroll-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .day-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 6px 4px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x proximity;
+      scrollbar-width: thin;
+      max-width: 100%;
+    }
+    .day-tabs::-webkit-scrollbar {
+      height: 4px;
+    }
+    .day-tabs::-webkit-scrollbar-thumb {
+      background: rgba(15, 61, 76, 0.25);
+      border-radius: 999px;
+    }
     .day-tab {
       flex: 0 0 auto;
-      min-width: 72px;
+      min-width: 76px;
       padding: 10px 12px;
       border-radius: 14px;
       background: var(--surface);
       border: 1px solid var(--line);
       text-align: center;
+      scroll-snap-align: start;
     }
     .day-tab strong { display: block; font-size: 13px; font-weight: 700; }
     .day-tab span { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
@@ -475,7 +511,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v29</div>
+      <div class="app-label">Trip · v30</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -502,7 +538,11 @@
       <input id="importFile" type="file" accept="application/json,.json" hidden />
     </div>
 
-    <div class="day-tabs" id="dayTabs"></div>
+    <div class="day-tabs-wrap">
+      <button class="day-scroll-btn" type="button" id="dayScrollLeft" aria-label="이전 날짜">‹</button>
+      <div class="day-tabs" id="dayTabs"></div>
+      <button class="day-scroll-btn" type="button" id="dayScrollRight" aria-label="다음 날짜">›</button>
+    </div>
     <main class="content">
       <div class="day-title">
         <h2 id="dayHeading">Day 1</h2>
@@ -1962,6 +2002,14 @@
           `;
         })
         .join("");
+      requestAnimationFrame(() => {
+        els.dayTabs.querySelector(".day-tab.active")?.scrollIntoView({
+          inline: "center",
+          block: "nearest",
+          behavior: "smooth",
+        });
+        updateDayScrollButtons();
+      });
 
       const day = activeDay();
       if (!day) {
@@ -2219,6 +2267,24 @@
       };
       reader.readAsText(file);
     }
+
+    function updateDayScrollButtons() {
+      const el = els.dayTabs;
+      const left = document.getElementById("dayScrollLeft");
+      const right = document.getElementById("dayScrollRight");
+      if (!el || !left || !right) return;
+      const max = el.scrollWidth - el.clientWidth;
+      left.disabled = el.scrollLeft <= 2;
+      right.disabled = el.scrollLeft >= max - 2;
+    }
+
+    els.dayTabs.addEventListener("scroll", updateDayScrollButtons, { passive: true });
+    document.getElementById("dayScrollLeft")?.addEventListener("click", () => {
+      els.dayTabs.scrollBy({ left: -160, behavior: "smooth" });
+    });
+    document.getElementById("dayScrollRight")?.addEventListener("click", () => {
+      els.dayTabs.scrollBy({ left: 160, behavior: "smooth" });
+    });
 
     els.dayTabs.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-day]");
@@ -2528,9 +2594,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v29").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v30").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v29.js");
+        return navigator.serviceWorker.register("./sw.v30.js");
       }).catch(() => {});
     }
   </script>
