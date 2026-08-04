@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v24</div>
+      <div class="app-label">Trip · v25</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -1369,6 +1369,22 @@
       [/대구/gi, "Daegu"],
       [/대전/gi, "Daejeon"],
       [/광주/gi, "Gwangju"],
+      // 공항 전체 명칭을 도시명보다 먼저 매칭
+      [/푸동\s*국제\s*공항|푸동공항/gi, "Shanghai Pudong International Airport"],
+      [/홍차오\s*국제\s*공항|홍차오공항/gi, "Shanghai Hongqiao International Airport"],
+      [/인천\s*국제\s*공항|인천공항/gi, "Incheon International Airport"],
+      [/김포\s*국제\s*공항|김포공항/gi, "Gimpo International Airport"],
+      [/김해\s*국제\s*공항|김해공항/gi, "Gimhae International Airport"],
+      [/제주\s*국제\s*공항|제주공항/gi, "Jeju International Airport"],
+      [/나리타\s*국제\s*공항|나리타공항/gi, "Narita International Airport"],
+      [/하네다\s*국제\s*공항|하네다공항/gi, "Haneda Airport"],
+      [/간사이\s*국제\s*공항|간사이공항/gi, "Kansai International Airport"],
+      [/베이징\s*수도\s*국제\s*공항|베이징공항|북경공항/gi, "Beijing Capital International Airport"],
+      [/히드로\s*공항|히드로/gi, "Heathrow Airport"],
+      [/샤를드골|샤를\s*드\s*골/gi, "Charles de Gaulle Airport"],
+      [/말펜사\s*공항|말펜사/gi, "Milan Malpensa Airport"],
+      [/리나테\s*공항|리나테/gi, "Milan Linate Airport"],
+      [/피우미치노/gi, "Rome Fiumicino Airport"],
       [/인천/gi, "Incheon"],
       [/김포/gi, "Gimpo"],
       [/김해/gi, "Gimhae"],
@@ -1377,12 +1393,11 @@
       [/나리타/gi, "Narita"],
       [/하네다/gi, "Haneda"],
       [/간사이/gi, "Kansai"],
-      [/히드로/gi, "Heathrow"],
-      [/샤를드골|샤를\s*드\s*골/gi, "Charles de Gaulle"],
+      [/국제\s*공항/gi, " International Airport"],
+      [/공항/gi, " Airport"],
       [/테르미니/gi, "Termini"],
-      [/공항/gi, "Airport"],
-      [/중앙역|기차역/gi, "Station"],
-      [/지하철역/gi, "Metro Station"],
+      [/중앙역|기차역/gi, " Station"],
+      [/지하철역/gi, " Metro Station"],
       [/호텔/gi, "Hotel"],
       [/성당/gi, "Cathedral"],
       [/광장/gi, "Square"],
@@ -1396,12 +1411,47 @@
       if (!q) return [];
       const variants = new Set([q]);
 
+      // IATA 코드 (PVG, ICN …)
+      const iata = q.match(/\b([A-Z]{3})\b/);
+      if (iata) {
+        const code = iata[1].toUpperCase();
+        const known = {
+          PVG: "Shanghai Pudong International Airport",
+          SHA: "Shanghai Hongqiao International Airport",
+          ICN: "Incheon International Airport",
+          GMP: "Gimpo International Airport",
+          PUS: "Gimhae International Airport",
+          CJU: "Jeju International Airport",
+          NRT: "Narita International Airport",
+          HND: "Haneda Airport",
+          KIX: "Kansai International Airport",
+          PEK: "Beijing Capital International Airport",
+          PKX: "Beijing Daxing International Airport",
+          MXP: "Milan Malpensa Airport",
+          LIN: "Milan Linate Airport",
+          FCO: "Rome Fiumicino Airport",
+          CDG: "Charles de Gaulle Airport",
+          LHR: "Heathrow Airport",
+          HKG: "Hong Kong International Airport",
+          TPE: "Taiwan Taoyuan International Airport",
+          BKK: "Suvarnabhumi Airport",
+          SIN: "Singapore Changi Airport",
+        };
+        if (known[code]) variants.add(known[code]);
+      }
+
       let latin = q;
       for (const [re, rep] of KO_PLACE_MAP) latin = latin.replace(re, rep);
-      // "서울역" → "Seoul역" 남은 끝자리 역
       latin = latin.replace(/역$/u, " Station");
+      // 영문 단어 붙음 보정: PudongInternationalAirport → Pudong International Airport
+      latin = latin.replace(/([a-z])([A-Z])/g, "$1 $2");
       latin = latin.replace(/\s+/g, " ").trim();
       if (latin && latin !== q) variants.add(latin);
+      // 변환 후에도 한글이 남으면 영문만 남긴 버전도 추가
+      if (/[가-힣]/.test(latin)) {
+        const asciiOnly = latin.replace(/[가-힣]+/g, " ").replace(/\s+/g, " ").trim();
+        if (asciiOnly.length >= 3) variants.add(asciiOnly);
+      }
 
       // 이탈리아 역 조합
       if (/밀라노|Milano/i.test(q) && /중앙역|Centrale|Station/i.test(q)) {
@@ -1468,7 +1518,7 @@
         side === "from" ? "출발지 · 지도에서 선택" : "도착지 · 지도에서 선택";
       document.getElementById("mapSearchInput").value = preset;
       document.getElementById("mapSearchResults").innerHTML =
-        `<div class="place-meta pending">예: 파리, 도쿄, 뉴욕, 밀라노 중앙역</div>`;
+        `<div class="place-meta pending">예: 푸동국제공항, 파리, 밀라노 중앙역</div>`;
 
       [els.tripSheet, els.daySheet, els.tripsSheet, els.menuSheet].forEach((s) => s?.classList.remove("show"));
       els.itemSheet.classList.remove("show");
@@ -2200,9 +2250,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v24").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v25").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v24.js");
+        return navigator.serviceWorker.register("./sw.v25.js");
       }).catch(() => {});
     }
   </script>
