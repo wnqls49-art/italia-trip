@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v26</div>
+      <div class="app-label">Trip · v27</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -1029,10 +1029,41 @@
       return hints;
     }
 
+    // 구글맵이 기기 위치(한국)로 치우치지 않도록 여행 나라 힌트 추가
+    function tripCountryHint() {
+      const title = String(activeTrip()?.title || "");
+      if (/이탈리아|이태리|italy|italia/i.test(title)) return "Italy";
+      if (/중국|china|중국여행/i.test(title)) return "China";
+      if (/일본|japan/i.test(title)) return "Japan";
+      if (/프랑스|france/i.test(title)) return "France";
+      if (/스페인|spain/i.test(title)) return "Spain";
+      if (/독일|germany|deutschland/i.test(title)) return "Germany";
+      if (/스위스|switzerland/i.test(title)) return "Switzerland";
+      if (/오스트리아|austria/i.test(title)) return "Austria";
+      if (/미국|usa|united states/i.test(title)) return "USA";
+      if (/한국|korea|대한민국/i.test(title)) return "South Korea";
+      // 제목이 나라명이면 그대로 영문 변환 시도
+      if (title && !/[→\-·]/.test(title) && title.length <= 20) {
+        let t = title;
+        for (const [re, rep] of [
+          [/이탈리아|이태리/gi, "Italy"],
+          [/중국/gi, "China"],
+          [/일본/gi, "Japan"],
+        ]) t = t.replace(re, rep);
+        if (t !== title && /^[A-Za-z\s]+$/.test(t)) return t.trim();
+      }
+      return "";
+    }
+
+    function isLatLng(text) {
+      return /^-?\d{1,3}\.\d+\s*,\s*-?\d{1,3}\.\d+$/.test(String(text || "").trim());
+    }
+
     // 구글맵 길찾기는 마케팅용 풀네임을 못 찾는 경우가 많음 → 짧은 상호명으로 정리
     function simplifyPlaceForMaps(place) {
       let text = String(place || "").trim();
       if (!text || /^https?:\/\//i.test(text)) return text;
+      if (isLatLng(text)) return text.replace(/\s+/g, "");
 
       // "Hotel Europa sky pool & panorama" → "Hotel Europa"
       const hotel = text.match(/^(Hotels?\s+[A-Za-zÀ-ÿ0-9’']+)/i);
@@ -1051,14 +1082,21 @@
     function withMapContext(place, item) {
       const raw = String(place || "").trim();
       if (!raw || /^https?:\/\//i.test(raw)) return raw;
+      if (isLatLng(raw)) return raw.replace(/\s+/g, "");
       const text = simplifyPlaceForMaps(raw);
       const extras = locationHints(item).filter((h) => !text.toLowerCase().includes(h.toLowerCase()));
-      return extras.length ? `${text}, ${extras.join(", ")}` : text;
+      let out = extras.length ? `${text}, ${extras.join(", ")}` : text;
+      // 좌표가 아닐 때 나라 힌트를 붙여 서울 편향 검색 방지 (alpe di siusi → Italy)
+      const country = tripCountryHint();
+      if (country && !out.toLowerCase().includes(country.toLowerCase())) {
+        out = `${out}, ${country}`;
+      }
+      return out;
     }
 
     function mapEndpoint(item, side) {
       const coords = side === "from" ? item.fromCoords : item.toCoords;
-      if (coords) return coords;
+      if (coords && isLatLng(coords)) return String(coords).replace(/\s+/g, "");
       const name = side === "from" ? item.from : item.to;
       return withMapContext(name, item);
     }
@@ -1096,15 +1134,23 @@
       return null;
     }
 
+    // 구글맵 기본 길찾기 (교통수단은 맵에서 사용자가 선택)
+    function googleMapsDirUrl(origin, destination) {
+      if (!origin || !destination) return null;
+      return (
+        `https://www.google.com/maps/dir/?api=1` +
+        `&origin=${encodeURIComponent(origin)}` +
+        `&destination=${encodeURIComponent(destination)}`
+      );
+    }
+
     function mapsUrl(item) {
       const custom = (item.mapsQuery || "").trim();
       if (/^https?:\/\//i.test(custom)) return custom;
 
       const origin = mapEndpoint(item, "from");
       const destination = mapEndpoint(item, "to");
-      if (origin && destination) {
-        return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
-      }
+      if (origin && destination) return googleMapsDirUrl(origin, destination);
 
       const single = destination || origin || withMapContext(item.place || custom || item.title, item);
       if (!single) return null;
@@ -1132,8 +1178,7 @@
     function directionsUrl(fromItem, toItem) {
       const origin = mapEndpoint(fromItem, "to") || mapEndpoint(fromItem, "from");
       const dest = mapEndpoint(toItem, "from") || mapEndpoint(toItem, "to");
-      if (!origin || !dest) return null;
-      return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=transit`;
+      return googleMapsDirUrl(origin, dest);
     }
 
     function parseRoute(item) {
@@ -2425,9 +2470,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v26").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v27").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v26.js");
+        return navigator.serviceWorker.register("./sw.v27.js");
       }).catch(() => {});
     }
   </script>
