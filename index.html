@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v28</div>
+      <div class="app-label">Trip · v29</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -545,23 +545,23 @@
         <div class="field">
           <label for="itemFrom" id="itemFromLabel">출발지</label>
           <input id="itemFrom" autocomplete="off" placeholder="직접 입력 또는 아래에서 지도 선택" />
-          <button class="map-pick-btn" type="button" id="pickFromBtn">지도에서 선택</button>
+          <button class="map-pick-btn" type="button" id="pickFromBtn">지도에서 선택 · 좌표 저장</button>
           <input type="hidden" id="itemFromCoords" />
           <input type="hidden" id="itemFromUrl" />
-          <div class="place-meta pending" id="fromMeta">지도에서 선택하면 길찾기가 정확해져요</div>
+          <div class="place-meta pending" id="fromMeta">지도에서 고르면 길찾기 때 구글맵에 자동 입력돼요</div>
         </div>
         <div class="field">
           <label for="itemTo" id="itemToLabel">도착지</label>
           <input id="itemTo" autocomplete="off" placeholder="직접 입력 또는 아래에서 지도 선택" />
-          <button class="map-pick-btn" type="button" id="pickToBtn">지도에서 선택</button>
+          <button class="map-pick-btn" type="button" id="pickToBtn">지도에서 선택 · 좌표 저장</button>
           <input type="hidden" id="itemToCoords" />
           <input type="hidden" id="itemToUrl" />
-          <div class="place-meta pending" id="toMeta">지도에서 선택하면 길찾기가 정확해져요</div>
+          <div class="place-meta pending" id="toMeta">지도에서 고르면 길찾기 때 구글맵에 자동 입력돼요</div>
         </div>
       </div>
       <div class="field" id="titleField">
         <label for="itemTitle">제목 / 도시</label>
-        <input id="itemTitle" placeholder="예: 리바델가르다 (구글맵 혼동 방지)" />
+        <input id="itemTitle" placeholder="예: 세체다 케이블카" />
       </div>
       <div class="row-2">
         <div class="field">
@@ -575,11 +575,11 @@
       </div>
       <div class="field">
         <label for="itemTravel">다음 장소까지 이동시간</label>
-        <input id="itemTravel" placeholder="예: 도보 15분 / 지하철 20분" />
+        <input id="itemTravel" placeholder="예: 차 40분 / 케이블카 20분" />
       </div>
       <div class="field">
-        <label for="itemMaps">구글맵 URL (선택)</label>
-        <input id="itemMaps" placeholder="비우면 출발→도착으로 자동 길찾기" />
+        <label for="itemMaps">구글맵 URL (선택 · 보통 비워도 됨)</label>
+        <input id="itemMaps" placeholder="비우면 등록한 출·도착으로 자동 길찾기" />
       </div>
       <div class="field">
         <label for="itemNote">메모</label>
@@ -1127,6 +1127,30 @@
       return withMapContext(name, item);
     }
 
+    // 이 일정의 "위치 핀" — 좌표 우선 (구글맵 출/도착 자동 입력용)
+    function itemPin(item, prefer = "any") {
+      if (!item) return null;
+      const fromC = item.fromCoords && isLatLng(item.fromCoords) ? String(item.fromCoords).replace(/\s+/g, "") : "";
+      const toC = item.toCoords && isLatLng(item.toCoords) ? String(item.toCoords).replace(/\s+/g, "") : "";
+      const fromN = item.from ? withMapContext(item.from, item) : "";
+      const toN = item.to ? withMapContext(item.to, item) : "";
+      const placeN = item.place ? withMapContext(item.place, item) : "";
+
+      if (prefer === "leave") {
+        // 이 장소를 떠나 다음으로 갈 때
+        return toC || fromC || toN || fromN || placeN || null;
+      }
+      if (prefer === "arrive") {
+        // 다음 장소로 도착할 때
+        return fromC || toC || fromN || toN || placeN || null;
+      }
+      return toC || fromC || toN || fromN || placeN || null;
+    }
+
+    function itemHasMapPin(item) {
+      return !!(item?.fromCoords && isLatLng(item.fromCoords)) || !!(item?.toCoords && isLatLng(item.toCoords));
+    }
+
     function parseGoogleMapsLink(text) {
       const raw = String(text || "").trim();
       if (!raw) return null;
@@ -1160,9 +1184,12 @@
       return null;
     }
 
-    // 구글맵 기본 길찾기 (교통수단은 맵에서 사용자가 선택)
+    // 구글맵 길찾기 — 출·도착이 채워진 채로 열림 (앱에서 한 번만 누르면 됨)
     function googleMapsDirUrl(origin, destination) {
       if (!origin || !destination) return null;
+      if (origin === destination) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(origin)}`;
+      }
       return (
         `https://www.google.com/maps/dir/?api=1` +
         `&origin=${encodeURIComponent(origin)}` +
@@ -1174,17 +1201,18 @@
       const custom = (item.mapsQuery || "").trim();
       if (/^https?:\/\//i.test(custom)) return custom;
 
-      const origin = mapEndpoint(item, "from");
-      const destination = mapEndpoint(item, "to");
+      const origin = mapEndpoint(item, "from") || (item.fromCoords && isLatLng(item.fromCoords) ? item.fromCoords : "");
+      const destination = mapEndpoint(item, "to") || (item.toCoords && isLatLng(item.toCoords) ? item.toCoords : "");
       if (origin && destination) return googleMapsDirUrl(origin, destination);
 
-      const single = destination || origin || withMapContext(item.place || custom || item.title, item);
-      if (!single) return null;
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(single)}`;
+      const pin = itemPin(item, "any");
+      if (!pin) return null;
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pin)}`;
     }
 
     function mapsButtonLabel(item) {
-      return item.from && item.to ? "길찾기 열기" : "구글맵 열기";
+      if (item.from && item.to) return "구글맵 길찾기";
+      return itemHasMapPin(item) ? "구글맵에서 보기" : "구글맵 열기";
     }
 
     function itemTimeSortKey(item) {
@@ -1201,9 +1229,10 @@
       return item.place || "";
     }
 
+    // 현재 일정 → 다음 일정 동선 (등록된 좌표/장소로 구글맵 출·도착 자동)
     function directionsUrl(fromItem, toItem) {
-      const origin = mapEndpoint(fromItem, "to") || mapEndpoint(fromItem, "from");
-      const dest = mapEndpoint(toItem, "from") || mapEndpoint(toItem, "to");
+      const origin = itemPin(fromItem, "leave");
+      const dest = itemPin(toItem, "arrive");
       return googleMapsDirUrl(origin, dest);
     }
 
@@ -1322,10 +1351,10 @@
       const meta = document.getElementById(side === "from" ? "fromMeta" : "toMeta");
       if (!meta) return;
       if (coords) {
-        meta.textContent = `지도에서 선택됨 · ${coords}`;
+        meta.textContent = `✓ 지도 등록됨 · 길찾기 시 구글맵에 자동 입력 · ${coords}`;
         meta.classList.remove("pending");
       } else {
-        meta.textContent = "지도에서 선택하면 길찾기가 정확해져요";
+        meta.textContent = "지도에서 고르면 길찾기 때 구글맵에 자동 입력돼요";
         meta.classList.add("pending");
       }
     }
@@ -1967,7 +1996,8 @@
           const isOpen = openItemId === item.id;
           const map = mapsUrl(item);
           const dir = next ? directionsUrl(item, next) : null;
-          const travelText = item.travelTime || (next ? "이동시간 미입력" : "");
+          const travelText = item.travelTime || (next ? "다음 장소로 이동" : "");
+          const pinOk = itemHasMapPin(item);
           return `
             <div class="item-wrap">
               <div class="dot ${item.type || "place"}"></div>
@@ -1977,6 +2007,7 @@
                     <div class="type-row">
                       <span class="badge ${item.type || "place"}">${TYPE_LABEL[item.type] || "장소"}</span>
                       <span class="time">${[item.start, item.end].filter(Boolean).join(" – ") || "시간 미정"}</span>
+                      ${pinOk ? `<span class="time" style="color:var(--accent)">지도✓</span>` : ""}
                     </div>
                     <div class="title">${escapeHtml(item.title)}</div>
                     ${itemSubtitle(item) ? `<div class="subtitle">${escapeHtml(itemSubtitle(item))}</div>` : ""}
@@ -1988,10 +2019,11 @@
                   <div class="meta-grid">
                     ${item.travelTime ? `<div class="meta"><span>다음까지</span><strong>${escapeHtml(item.travelTime)}</strong></div>` : ""}
                     ${itemSubtitle(item) ? `<div class="meta"><span>${parseRoute(item) ? "구간" : "장소"}</span><strong>${escapeHtml(itemSubtitle(item))}</strong></div>` : ""}
+                    <div class="meta"><span>구글맵</span><strong>${pinOk ? "좌표 등록 · 길찾기 원탭" : "이름만 등록 · 지도에서 선택 권장"}</strong></div>
                   </div>
                   <div class="actions">
                     ${map ? `<a class="btn btn-primary" href="${map}" target="_blank" rel="noopener">${mapsButtonLabel(item)}</a>` : ""}
-                    ${dir ? `<a class="btn btn-ghost" href="${dir}" target="_blank" rel="noopener">다음 장소 동선</a>` : ""}
+                    ${dir ? `<a class="btn btn-primary" href="${dir}" target="_blank" rel="noopener">다음 장소 구글맵 길찾기</a>` : ""}
                     <button class="btn btn-ghost" type="button" data-edit="${item.id}">수정</button>
                     <button class="btn btn-danger" type="button" data-delete="${item.id}">삭제</button>
                   </div>
@@ -2002,7 +2034,7 @@
                   ? `<div class="travel">
                       <span>↳ ${escapeHtml(travelText)}</span>
                       <span class="travel-line"></span>
-                      ${dir ? `<a href="${dir}" target="_blank" rel="noopener">길찾기</a>` : ""}
+                      ${dir ? `<a class="btn btn-primary" href="${dir}" target="_blank" rel="noopener" style="width:auto;padding:8px 12px;font-size:13px;text-decoration:none">구글맵 길찾기</a>` : `<span class="place-meta pending">출·도착을 지도에서 선택해 주세요</span>`}
                     </div>`
                   : ""
               }
@@ -2496,9 +2528,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v28").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v29").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v28.js");
+        return navigator.serviceWorker.register("./sw.v29.js");
       }).catch(() => {});
     }
   </script>
