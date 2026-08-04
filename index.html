@@ -397,11 +397,12 @@
     .map-pick-btn {
       flex: 0 0 auto;
       min-height: 46px;
+      min-width: 64px;
       padding: 0 12px;
       border-radius: 12px;
       background: var(--brand);
       color: #fff;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -446,7 +447,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip</div>
+      <div class="app-label">Trip · v16</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -1762,9 +1763,15 @@
       tipEl?.classList.remove("show");
     });
 
+    // Force fresh app: drop old service workers, use network-first worker
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./sw.js?v=15").then((reg) => {
-        reg.update();
+      navigator.serviceWorker.getRegistrations().then(async (regs) => {
+        await Promise.all(regs.map((r) => r.unregister()));
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.filter((k) => k !== "trip-v16").map((k) => caches.delete(k)));
+        }
+        return navigator.serviceWorker.register("./sw.v16.js");
       }).catch(() => {});
     }
   </script>

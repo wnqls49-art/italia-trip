@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trip 업데이트</title>
+  <style>
+    body {
+      font-family: -apple-system, sans-serif;
+      padding: 40px 24px;
+      background: #0f3d4c;
+      color: #fff;
+      line-height: 1.5;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 16px;
+      border: 0;
+      border-radius: 14px;
+      background: #fff;
+      color: #0f3d4c;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    p { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <h1>Trip 업데이트</h1>
+  <p>예전 화면 캐시를 지우고 새 버전으로 이동합니다.</p>
+  <p id="status">준비 중…</p>
+  <button type="button" id="go">캐시 삭제 후 열기</button>
+  <script>
+    async function clearAll() {
+      const status = document.getElementById("status");
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+          status.textContent = `서비스워커 ${regs.length}개 제거…`;
+        }
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+          status.textContent = `캐시 ${keys.length}개 삭제 완료`;
+        }
+      } catch (e) {
+        status.textContent = "일부 삭제 실패 · 그래도 이동합니다";
+      }
+      setTimeout(() => {
+        location.replace("./index.html?v=16&ts=" + Date.now());
+      }, 400);
+    }
+    document.getElementById("go").onclick = clearAll;
+    clearAll();
+  </script>
+</body>
+</html>
