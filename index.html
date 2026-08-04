@@ -1198,6 +1198,13 @@
         variants.add("Firenze Santa Maria Novella");
         variants.add("Firenze SMN");
       }
+      // 도시 없이 "이탈리아 중앙역"만 검색한 경우
+      if (/중앙역|Centrale/i.test(q + " " + latin) && /Italy|Italia|이탈리아/i.test(q + " " + latin)
+        && !/(밀라노|로마|피렌체|베네치아|Milano|Roma|Firenze|Venezia)/i.test(q)) {
+        variants.add("Milano Centrale");
+        variants.add("Roma Termini");
+        variants.add("Firenze Santa Maria Novella");
+      }
 
       const trip = activeTrip();
       if (trip?.title) {
