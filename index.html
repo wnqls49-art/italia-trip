@@ -479,7 +479,7 @@
       </div>
       <div class="field" id="titleField">
         <label for="itemTitle">제목</label>
-        <input id="itemTitle" required placeholder="예: 콜로세움" />
+        <input id="itemTitle" placeholder="예: 콜로세움" />
       </div>
       <div class="field">
         <label for="itemDate">날짜</label>
@@ -873,10 +873,12 @@
       const routeFields = document.getElementById("routeFields");
       const placeField = document.getElementById("placeField");
       const titleField = document.getElementById("titleField");
+      const titleEl = document.getElementById("itemTitle");
       routeFields.classList.toggle("form-hidden", !isRoute);
       placeField.classList.toggle("form-hidden", isRoute);
       titleField.classList.toggle("form-hidden", isRoute);
-      document.getElementById("itemTitle").required = !isRoute;
+      titleEl.required = false;
+      titleEl.disabled = isRoute;
       document.getElementById("itemFrom").required = isRoute;
       document.getElementById("itemTo").required = isRoute;
       document.getElementById("itemStartLabel").textContent = isRoute ? "출발 시간" : "시작";
@@ -1382,34 +1384,38 @@
       const type = document.getElementById("itemType").value;
       const from = document.getElementById("itemFrom").value.trim();
       const to = document.getElementById("itemTo").value.trim();
-      if ((type === "flight" || type === "train") && (!from || !to)) {
+      const isRoute = type === "flight" || type === "train";
+      if (isRoute && (!from || !to)) {
         toast(type === "flight" ? "출발지와 도착지를 입력해 주세요" : "출발역과 도착역을 입력해 주세요");
         document.getElementById(from ? "itemTo" : "itemFrom").focus();
         return;
       }
       const place = document.getElementById("itemPlace").value.trim();
+      // disabled title is not submitted; always build title in JS
+      const titleEl = document.getElementById("itemTitle");
+      if (isRoute) {
+        titleEl.disabled = false;
+        titleEl.value = routeTitle(from, to);
+      }
       const autoTitle = routeTitle(from, to);
       const payload = {
         id: editingItemId || uid(),
         type,
-        title: (type === "flight" || type === "train")
-          ? autoTitle
-          : document.getElementById("itemTitle").value.trim(),
+        title: isRoute ? autoTitle : titleEl.value.trim(),
         date: itemDate,
-        place: type === "flight" || type === "train"
-          ? autoTitle
-          : place,
-        from: type === "flight" || type === "train" ? from : "",
-        to: type === "flight" || type === "train" ? to : "",
+        place: isRoute ? autoTitle : place,
+        from: isRoute ? from : "",
+        to: isRoute ? to : "",
         start: document.getElementById("itemStart").value,
         end: document.getElementById("itemEnd").value,
         travelTime: document.getElementById("itemTravel").value.trim(),
         mapsQuery: document.getElementById("itemMaps").value.trim(),
         note: document.getElementById("itemNote").value.trim(),
       };
+      if (isRoute) titleEl.disabled = true;
 
       if (!payload.title) {
-        toast("제목을 입력해 주세요");
+        toast(isRoute ? "출발지와 도착지를 입력해 주세요" : "제목을 입력해 주세요");
         return;
       }
 
