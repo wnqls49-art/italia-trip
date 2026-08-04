@@ -12,9 +12,9 @@
   <meta name="application-name" content="Trip" />
   <meta name="format-detection" content="telephone=no" />
   <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="./icon-180.png?v=3" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=3" />
-  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png?v=3" />
+  <link rel="apple-touch-icon" href="./icon-180.png?v=8" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=8" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png?v=8" />
   <title>Trip · 여행 일정</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -379,6 +379,8 @@
     }
     .field textarea { min-height: 88px; resize: vertical; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .route-fields { display: grid; gap: 12px; }
+    .form-hidden { display: none !important; }
     .toast {
       position: fixed; left: 50%; bottom: calc(84px + var(--safe-bottom));
       transform: translateX(-50%) translateY(12px);
@@ -487,23 +489,23 @@
         <label for="itemPlace">장소 / 주소</label>
         <input id="itemPlace" placeholder="예: 도시, 명소 주소" />
       </div>
-      <div id="routeFields" hidden>
+      <div id="routeFields" class="route-fields">
         <div class="field">
-          <label for="itemFrom">출발</label>
+          <label for="itemFrom" id="itemFromLabel">출발지</label>
           <input id="itemFrom" placeholder="예: ICN 인천국제공항 T1" />
         </div>
         <div class="field">
-          <label for="itemTo">도착</label>
+          <label for="itemTo" id="itemToLabel">도착지</label>
           <input id="itemTo" placeholder="예: PVG 푸동국제공항 T1" />
         </div>
       </div>
       <div class="row-2">
         <div class="field">
-          <label for="itemStart">시작</label>
+          <label for="itemStart" id="itemStartLabel">출발 시간</label>
           <input id="itemStart" type="time" />
         </div>
         <div class="field">
-          <label for="itemEnd">종료</label>
+          <label for="itemEnd" id="itemEndLabel">도착 시간</label>
           <input id="itemEnd" type="time" />
         </div>
       </div>
@@ -870,10 +872,14 @@
       const isRoute = type === "flight" || type === "train";
       const routeFields = document.getElementById("routeFields");
       const placeField = document.getElementById("placeField");
-      routeFields.hidden = !isRoute;
-      placeField.hidden = isRoute;
-      routeFields.style.display = isRoute ? "grid" : "none";
-      placeField.style.display = isRoute ? "none" : "grid";
+      routeFields.classList.toggle("form-hidden", !isRoute);
+      placeField.classList.toggle("form-hidden", isRoute);
+      document.getElementById("itemFrom").required = isRoute;
+      document.getElementById("itemTo").required = isRoute;
+      document.getElementById("itemStartLabel").textContent = isRoute ? "출발 시간" : "시작";
+      document.getElementById("itemEndLabel").textContent = isRoute ? "도착 시간" : "종료";
+      document.getElementById("itemFromLabel").textContent = type === "train" ? "출발역" : "출발지";
+      document.getElementById("itemToLabel").textContent = type === "train" ? "도착역" : "도착지";
     }
 
     function ensureDayForDate(dateStr) {
@@ -1353,6 +1359,11 @@
       const type = document.getElementById("itemType").value;
       const from = document.getElementById("itemFrom").value.trim();
       const to = document.getElementById("itemTo").value.trim();
+      if ((type === "flight" || type === "train") && (!from || !to)) {
+        toast(type === "flight" ? "출발지와 도착지를 입력해 주세요" : "출발역과 도착역을 입력해 주세요");
+        document.getElementById(from ? "itemTo" : "itemFrom").focus();
+        return;
+      }
       const place = document.getElementById("itemPlace").value.trim();
       const payload = {
         id: editingItemId || uid(),
