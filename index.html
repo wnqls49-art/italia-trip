@@ -511,7 +511,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v30</div>
+      <div class="app-label">Trip · v31</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -1122,6 +1122,9 @@
         [/세체다|세세다/gi, "Seceda"],
         [/오르티세이|오르티제이/gi, "Ortisei"],
         [/리바\s*델\s*가르다|리바델가르다/gi, "Riva del Garda"],
+        [/인천\s*공항|인천국제공항/gi, "Incheon International Airport"],
+        [/푸동\s*국제공항|푸동공항/gi, "Shanghai Pudong International Airport"],
+        [/상해|상하이/gi, "Shanghai"],
         [/밀라노/gi, "Milan"],
         [/로마/gi, "Rome"],
         [/피렌체/gi, "Florence"],
@@ -1132,6 +1135,11 @@
           text = text.replace(re, rep);
           break;
         }
+      }
+
+      // "Incheon International Airport3층출국장(T1)" → 공항명만
+      if (/airport/i.test(text)) {
+        text = text.replace(/(airport).*/i, "$1").trim();
       }
 
       // 이름 끝에 붙은 나라 표기 제거 후 아래에서 한 번만 붙임
@@ -1149,9 +1157,17 @@
       if (!raw || /^https?:\/\//i.test(raw)) return raw;
       if (isLatLng(raw)) return raw.replace(/\s+/g, "");
 
-      // 제목/힌트를 뒤에 붙이지 않음 — 그게 "한글, 영문" 중복의 원인
       let out = cleanMapsPlaceName(raw);
       if (!out) return raw;
+
+      // 이미 고유명(공항·도시)이면 여행 나라명을 억지로 붙이지 않음
+      // (이탈리아 여행 중 상해 일정이 있어도 "…, Italy"가 붙으면 경로가 깨짐)
+      if (
+        /airport|international|station|hotel|shanghai|pudong|incheon|gimpo|beijing|tokyo|osaka|milan|rome|florence|venice|paris|london|seoul|busan/i.test(out) ||
+        /상해|상하이|푸동|인천|김포|베이징|도쿄|서울|중국|일본|프랑스|독일/i.test(raw)
+      ) {
+        return out;
+      }
 
       const country = tripCountryHint();
       if (country && !new RegExp(country, "i").test(out)) {
@@ -1161,13 +1177,15 @@
     }
 
     function mapEndpoint(item, side) {
+      // 구글맵 칸에는 좌표 대신 장소명 사용 (좌표만 넣으면 경로·이름 없이 숫자만 뜸)
+      const name = side === "from" ? item.from : item.to;
+      if (name) return withMapContext(name, item);
       const coords = side === "from" ? item.fromCoords : item.toCoords;
       if (coords && isLatLng(coords)) return String(coords).replace(/\s+/g, "");
-      const name = side === "from" ? item.from : item.to;
-      return withMapContext(name, item);
+      return null;
     }
 
-    // 이 일정의 "위치 핀" — 좌표 우선 (구글맵 출/도착 자동 입력용)
+    // 이 일정의 길찾기용 지점 — 장소명 우선 (좌표는 이름 없을 때만)
     function itemPin(item, prefer = "any") {
       if (!item) return null;
       const fromC = item.fromCoords && isLatLng(item.fromCoords) ? String(item.fromCoords).replace(/\s+/g, "") : "";
@@ -1177,18 +1195,22 @@
       const placeN = item.place ? withMapContext(item.place, item) : "";
 
       if (prefer === "leave") {
-        // 이 장소를 떠나 다음으로 갈 때
-        return toC || fromC || toN || fromN || placeN || null;
+        // 다음 장소로 떠날 때 = 이 일정의 도착지(비행이면 도착 공항)
+        return toN || toC || placeN || fromN || fromC || null;
       }
       if (prefer === "arrive") {
-        // 다음 장소로 도착할 때
-        return fromC || toC || fromN || toN || placeN || null;
+        // 다음 일정으로 들어갈 때 = 그 일정의 출발/장소
+        return fromN || toN || placeN || fromC || toC || null;
       }
-      return toC || fromC || toN || fromN || placeN || null;
+      return toN || fromN || placeN || toC || fromC || null;
     }
 
     function itemHasMapPin(item) {
       return !!(item?.fromCoords && isLatLng(item.fromCoords)) || !!(item?.toCoords && isLatLng(item.toCoords));
+    }
+
+    function isLongHaulType(item) {
+      return item?.type === "flight" || item?.type === "train";
     }
 
     function parseGoogleMapsLink(text) {
@@ -1224,16 +1246,18 @@
       return null;
     }
 
-    // 구글맵 길찾기 — 출·도착이 채워진 채로 열림 (앱에서 한 번만 누르면 됨)
+    // 구글맵 길찾기 — 장소명으로 출·도착 채움 (좌표만 넘기지 않음)
     function googleMapsDirUrl(origin, destination) {
       if (!origin || !destination) return null;
       if (origin === destination) {
         return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(origin)}`;
       }
+      // api=1 + travelmode=driving → 경로가 바로 계산됨
       return (
         `https://www.google.com/maps/dir/?api=1` +
         `&origin=${encodeURIComponent(origin)}` +
-        `&destination=${encodeURIComponent(destination)}`
+        `&destination=${encodeURIComponent(destination)}` +
+        `&travelmode=driving`
       );
     }
 
@@ -1241,8 +1265,17 @@
       const custom = (item.mapsQuery || "").trim();
       if (/^https?:\/\//i.test(custom)) return custom;
 
-      const origin = mapEndpoint(item, "from") || (item.fromCoords && isLatLng(item.fromCoords) ? item.fromCoords : "");
-      const destination = mapEndpoint(item, "to") || (item.toCoords && isLatLng(item.toCoords) ? item.toCoords : "");
+      // 비행/기차 구간은 차로 길을 찾지 못함 → 도착지 지도만 연다
+      if (isLongHaulType(item)) {
+        const dest = mapEndpoint(item, "to") || itemPin(item, "arrive");
+        if (dest) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dest)}`;
+        const origin = mapEndpoint(item, "from");
+        if (origin) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(origin)}`;
+        return null;
+      }
+
+      const origin = mapEndpoint(item, "from");
+      const destination = mapEndpoint(item, "to");
       if (origin && destination) return googleMapsDirUrl(origin, destination);
 
       const pin = itemPin(item, "any");
@@ -1251,6 +1284,7 @@
     }
 
     function mapsButtonLabel(item) {
+      if (isLongHaulType(item)) return "도착지 구글맵";
       if (item.from && item.to) return "구글맵 길찾기";
       return itemHasMapPin(item) ? "구글맵에서 보기" : "구글맵 열기";
     }
@@ -1269,7 +1303,7 @@
       return item.place || "";
     }
 
-    // 현재 일정 → 다음 일정 동선 (등록된 좌표/장소로 구글맵 출·도착 자동)
+    // 현재 일정 → 다음 일정 (도착 공항/장소 → 다음 장소)
     function directionsUrl(fromItem, toItem) {
       const origin = itemPin(fromItem, "leave");
       const dest = itemPin(toItem, "arrive");
@@ -2594,9 +2628,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v30").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v31").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v30.js");
+        return navigator.serviceWorker.register("./sw.v31.js");
       }).catch(() => {});
     }
   </script>
