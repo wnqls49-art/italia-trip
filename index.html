@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v18</div>
+      <div class="app-label">Trip · v19</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -823,6 +823,13 @@
       }, 450);
     }
 
+    function storeItemCount(data) {
+      return (data?.trips || []).reduce(
+        (n, t) => n + (t.days || []).reduce((m, d) => m + (d.items || []).length, 0),
+        0
+      );
+    }
+
     async function pushRemote() {
       const res = await fetch(SYNC.endpoint, {
         method: "POST",
@@ -869,14 +876,32 @@
         if (!res.ok) throw new Error("pull failed");
         const remoteRaw = await res.json();
         const remoteEmpty = !remoteRaw?.trips?.length;
+        const localCount = storeItemCount(store);
+
+        // Remote completely missing → upload local
         if (remoteEmpty) {
           if (!store.updatedAt) store.updatedAt = Date.now();
+          if (localCount > 0) await pushRemote();
+          else setSyncStatus("공유 중", "ok");
+          return;
+        }
+
+        const remote = migrate(remoteRaw);
+        const remoteCount = storeItemCount(remote);
+        const remoteAt = Number(remote.updatedAt || 0);
+        const localAt = Number(store.updatedAt || 0);
+
+        // Never let empty data wipe filled data
+        if (remoteCount === 0 && localCount > 0) {
+          store.updatedAt = Date.now();
           await pushRemote();
           return;
         }
-        const remote = migrate(remoteRaw);
-        const remoteAt = Number(remote.updatedAt || 0);
-        const localAt = Number(store.updatedAt || 0);
+        if (localCount === 0 && remoteCount > 0) {
+          applyRemote(remote, { silent });
+          return;
+        }
+
         if (remoteAt > localAt) {
           applyRemote(remote, { silent });
         } else if (localAt > remoteAt) {
@@ -1931,9 +1956,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v18").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v19").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v18.js");
+        return navigator.serviceWorker.register("./sw.v19.js");
       }).catch(() => {});
     }
   </script>
