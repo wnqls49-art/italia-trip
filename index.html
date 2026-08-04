@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v19</div>
+      <div class="app-label">Trip · v20</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -681,6 +681,10 @@
         현재 날짜 삭제
         <small>선택한 Day와 그 안의 일정이 삭제됩니다</small>
       </button>
+      <button type="button" id="menuRestoreBackup">
+        백업에서 복구
+        <small>이 기기에 저장된 최근 백업으로 복구</small>
+      </button>
       <button type="button" id="menuClearTrip">
         현재 여행 일정 비우기
         <small>이 나라 여행의 일정만 초기화</small>
@@ -812,7 +816,47 @@
       }
       store.updatedAt = Date.now();
       persistLocal();
+      saveLocalBackups(store);
       schedulePush();
+    }
+
+    function saveLocalBackups(data) {
+      if (storeItemCount(data) === 0) return;
+      try {
+        const key = "trip-app-backups-v1";
+        let list = JSON.parse(localStorage.getItem(key) || "[]");
+        if (!Array.isArray(list)) list = [];
+        list.unshift({ at: Date.now(), count: storeItemCount(data), data });
+        localStorage.setItem(key, JSON.stringify(list.slice(0, 15)));
+      } catch {}
+      // remote backup copy (best-effort)
+      fetch("https://mantledb.sh/v2/trip-wnqls49-art/store-backup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Mantle-Key": SYNC.key,
+        },
+        body: JSON.stringify(data),
+      }).catch(() => {});
+    }
+
+    function restoreLatestBackup() {
+      try {
+        const list = JSON.parse(localStorage.getItem("trip-app-backups-v1") || "[]");
+        const hit = (list || []).find((b) => storeItemCount(b.data) > 0);
+        if (!hit) {
+          toast("복구할 백업이 없어요");
+          return;
+        }
+        store = migrate(hit.data);
+        store.updatedAt = Date.now();
+        persistLocal();
+        schedulePush();
+        render();
+        toast(`백업 복구 · 일정 ${storeItemCount(store)}개`);
+      } catch {
+        toast("백업 복구 실패");
+      }
     }
 
     function schedulePush() {
@@ -1774,6 +1818,10 @@
 
     document.getElementById("menuAddDay").addEventListener("click", () => { closeSheets(); addDay(); });
     document.getElementById("menuDeleteDay").addEventListener("click", () => { closeSheets(); deleteActiveDay(); });
+    document.getElementById("menuRestoreBackup").addEventListener("click", () => {
+      closeSheets();
+      restoreLatestBackup();
+    });
     document.getElementById("menuClearTrip").addEventListener("click", () => {
       if (!confirm("현재 여행의 일정을 모두 지울까요?")) return;
       const trip = activeTrip();
@@ -1956,9 +2004,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v19").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v20").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v19.js");
+        return navigator.serviceWorker.register("./sw.v20.js");
       }).catch(() => {});
     }
   </script>
