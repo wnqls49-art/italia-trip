@@ -496,12 +496,13 @@
         </div>
         <div class="field">
           <label for="itemTo" id="itemToLabel">도착지</label>
-          <input id="itemTo" autocomplete="off" placeholder="예: 관광지 / 식당 / 도착 공항" />
+          <input id="itemTo" autocomplete="off" placeholder="예: Hotel Europa" />
+          <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">짧은 이름 + 위에 도시명 넣으면 구글맵이 정확히 찾아요</small>
         </div>
       </div>
       <div class="field" id="titleField">
-        <label for="itemTitle">제목</label>
-        <input id="itemTitle" placeholder="예: 콜로세움 / 호텔 이름" />
+        <label for="itemTitle">제목 / 도시</label>
+        <input id="itemTitle" placeholder="예: 리바델가르다 (구글맵 혼동 방지)" />
       </div>
       <div class="row-2">
         <div class="field">
@@ -826,6 +827,28 @@
       return d.toLocaleDateString("ko-KR", { month: "short", day: "numeric", weekday: "short" });
     }
 
+    function locationHints(item) {
+      const trip = activeTrip();
+      const hints = [];
+      const title = String(item?.title || "").trim();
+      const from = String(item?.from || "").trim();
+      const to = String(item?.to || "").trim();
+      const routeName = from && to ? `${from} → ${to}` : "";
+      // 제목이 구간명/장소명과 다르면 도시 힌트로 사용 (예: 리바델가르다)
+      if (title && title !== routeName && title !== from && title !== to && title !== item?.place) {
+        hints.push(title);
+      }
+      if (trip?.title) hints.push(trip.title);
+      return hints;
+    }
+
+    function withMapContext(place, item) {
+      const text = String(place || "").trim();
+      if (!text || /^https?:\/\//i.test(text)) return text;
+      const extras = locationHints(item).filter((h) => !text.toLowerCase().includes(h.toLowerCase()));
+      return extras.length ? `${text}, ${extras.join(", ")}` : text;
+    }
+
     function parseRoute(item) {
       if (item?.from?.trim() && item?.to?.trim()) {
         return { from: item.from.trim(), to: item.to.trim() };
@@ -843,10 +866,12 @@
 
       const route = parseRoute(item);
       if (route) {
-        return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(route.from)}&destination=${encodeURIComponent(route.to)}`;
+        const origin = withMapContext(route.from, item);
+        const destination = withMapContext(route.to, item);
+        return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
       }
 
-      const single = (item.to || item.from || item.place || custom || item.title || "").trim();
+      const single = withMapContext(item.to || item.from || item.place || custom || item.title, item);
       if (!single) return null;
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(single)}`;
     }
@@ -867,10 +892,12 @@
     function directionsUrl(fromItem, toItem) {
       const fromRoute = parseRoute(fromItem);
       const toRoute = parseRoute(toItem);
-      const origin = fromRoute?.to || fromItem.to || fromItem.mapsQuery || fromItem.place || fromItem.title;
-      const dest = toRoute?.from || toItem.from || toItem.to || toItem.mapsQuery || toItem.place || toItem.title;
-      if (!origin || !dest) return null;
-      if (/^https?:\/\//i.test(origin) || /^https?:\/\//i.test(dest)) return null;
+      const originRaw = fromRoute?.to || fromItem.to || fromItem.mapsQuery || fromItem.place || fromItem.title;
+      const destRaw = toRoute?.from || toItem.from || toItem.to || toItem.mapsQuery || toItem.place || toItem.title;
+      if (!originRaw || !destRaw) return null;
+      if (/^https?:\/\//i.test(originRaw) || /^https?:\/\//i.test(destRaw)) return null;
+      const origin = withMapContext(originRaw, fromItem);
+      const dest = withMapContext(destRaw, toItem);
       return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=transit`;
     }
 
@@ -1519,7 +1546,7 @@
     });
 
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./sw.js?v=12").then((reg) => {
+      navigator.serviceWorker.register("./sw.js?v=13").then((reg) => {
         reg.update();
       }).catch(() => {});
     }

@@ -1,4 +1,4 @@
-const CACHE = "trip-v12";
+const CACHE = "trip-v13";
 const ASSETS = [
   "./manifest.webmanifest",
   "./icon-180.png",
