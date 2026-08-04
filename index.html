@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v27</div>
+      <div class="app-label">Trip · v28</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -1022,18 +1022,16 @@
       const from = String(item?.from || "").trim();
       const to = String(item?.to || "").trim();
       const routeName = from && to ? `${from} → ${to}` : "";
-      // 제목이 도시명일 때만 힌트로 사용 (여행 나라명은 자동 추가하지 않음)
       if (title && title !== routeName && title !== from && title !== to && title !== item?.place) {
         hints.push(title);
       }
       return hints;
     }
 
-    // 구글맵이 기기 위치(한국)로 치우치지 않도록 여행 나라 힌트 추가
     function tripCountryHint() {
       const title = String(activeTrip()?.title || "");
       if (/이탈리아|이태리|italy|italia/i.test(title)) return "Italy";
-      if (/중국|china|중국여행/i.test(title)) return "China";
+      if (/중국|china/i.test(title)) return "China";
       if (/일본|japan/i.test(title)) return "Japan";
       if (/프랑스|france/i.test(title)) return "France";
       if (/스페인|spain/i.test(title)) return "Spain";
@@ -1042,16 +1040,6 @@
       if (/오스트리아|austria/i.test(title)) return "Austria";
       if (/미국|usa|united states/i.test(title)) return "USA";
       if (/한국|korea|대한민국/i.test(title)) return "South Korea";
-      // 제목이 나라명이면 그대로 영문 변환 시도
-      if (title && !/[→\-·]/.test(title) && title.length <= 20) {
-        let t = title;
-        for (const [re, rep] of [
-          [/이탈리아|이태리/gi, "Italy"],
-          [/중국/gi, "China"],
-          [/일본/gi, "Japan"],
-        ]) t = t.replace(re, rep);
-        if (t !== title && /^[A-Za-z\s]+$/.test(t)) return t.trim();
-      }
       return "";
     }
 
@@ -1059,23 +1047,60 @@
       return /^-?\d{1,3}\.\d+\s*,\s*-?\d{1,3}\.\d+$/.test(String(text || "").trim());
     }
 
-    // 구글맵 길찾기는 마케팅용 풀네임을 못 찾는 경우가 많음 → 짧은 상호명으로 정리
     function simplifyPlaceForMaps(place) {
       let text = String(place || "").trim();
       if (!text || /^https?:\/\//i.test(text)) return text;
       if (isLatLng(text)) return text.replace(/\s+/g, "");
 
-      // "Hotel Europa sky pool & panorama" → "Hotel Europa"
       const hotel = text.match(/^(Hotels?\s+[A-Za-zÀ-ÿ0-9’']+)/i);
       if (hotel) return hotel[1].trim();
 
-      // "리바 델 가르다 호텔 유로파 ..." 같은 긴 한글명은 앞 3~4단어만
       if (/[가-힣]/.test(text) && text.length > 24) {
         return text.split(/\s+/).slice(0, 4).join(" ");
       }
 
-      // "&", "|" 뒤 수식어 제거
       text = text.split(/\s*[&|/]\s*/)[0].trim();
+      return text;
+    }
+
+    // 구글 출발/도착칸에는 장소명 하나만 (한글·영문·나라 중복 금지)
+    function cleanMapsPlaceName(place) {
+      let text = simplifyPlaceForMaps(place);
+      if (!text || isLatLng(text)) return text;
+
+      // "알페 디 시우시 이탈리아, alpe di siusi" → 영문 쪽 우선
+      const parts = text.split(",").map((s) => s.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        const latinPart = parts.find((p) => /[A-Za-z]/.test(p) && !/[가-힣]/.test(p));
+        if (latinPart) text = latinPart;
+        else text = parts[0];
+      }
+
+      // 알려진 한글 지명 → 영문 (구글이 더 잘 찾음)
+      const known = [
+        [/알페\s*디\s*시우시|알페디시우시|사이저\s*알름/gi, "Alpe di Siusi"],
+        [/세체다|세세다/gi, "Seceda"],
+        [/오르티세이|오르티제이/gi, "Ortisei"],
+        [/리바\s*델\s*가르다|리바델가르다/gi, "Riva del Garda"],
+        [/밀라노/gi, "Milan"],
+        [/로마/gi, "Rome"],
+        [/피렌체/gi, "Florence"],
+        [/베네치아|베니스/gi, "Venice"],
+      ];
+      for (const [re, rep] of known) {
+        if (re.test(text)) {
+          text = text.replace(re, rep);
+          break;
+        }
+      }
+
+      // 이름 끝에 붙은 나라 표기 제거 후 아래에서 한 번만 붙임
+      text = text
+        .replace(/,?\s*(이탈리아|이태리|Italy|Italia|China|중국|Japan|일본|France|프랑스)\s*$/gi, "")
+        .replace(/\s+(이탈리아|이태리)\s*$/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
       return text;
     }
 
@@ -1083,12 +1108,13 @@
       const raw = String(place || "").trim();
       if (!raw || /^https?:\/\//i.test(raw)) return raw;
       if (isLatLng(raw)) return raw.replace(/\s+/g, "");
-      const text = simplifyPlaceForMaps(raw);
-      const extras = locationHints(item).filter((h) => !text.toLowerCase().includes(h.toLowerCase()));
-      let out = extras.length ? `${text}, ${extras.join(", ")}` : text;
-      // 좌표가 아닐 때 나라 힌트를 붙여 서울 편향 검색 방지 (alpe di siusi → Italy)
+
+      // 제목/힌트를 뒤에 붙이지 않음 — 그게 "한글, 영문" 중복의 원인
+      let out = cleanMapsPlaceName(raw);
+      if (!out) return raw;
+
       const country = tripCountryHint();
-      if (country && !out.toLowerCase().includes(country.toLowerCase())) {
+      if (country && !new RegExp(country, "i").test(out)) {
         out = `${out}, ${country}`;
       }
       return out;
@@ -2470,9 +2496,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v27").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v28").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v27.js");
+        return navigator.serviceWorker.register("./sw.v28.js");
       }).catch(() => {});
     }
   </script>
