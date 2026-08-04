@@ -388,6 +388,29 @@
       border: 1px solid #cfe3e8;
     }
     .route-fields .field label { color: var(--brand); }
+    .place-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .map-pick-btn {
+      flex: 0 0 auto;
+      min-height: 46px;
+      padding: 0 12px;
+      border-radius: 12px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .place-meta {
+      font-size: 11px;
+      color: var(--ok, #1f8a5b);
+      font-weight: 600;
+    }
+    .place-meta.pending { color: var(--muted); font-weight: 500; }
     .form-hidden { display: none !important; }
     .toast {
       position: fixed; left: 50%; bottom: calc(84px + var(--safe-bottom));
@@ -492,12 +515,23 @@
       <div id="routeFields" class="route-fields">
         <div class="field">
           <label for="itemFrom" id="itemFromLabel">출발지</label>
-          <input id="itemFrom" autocomplete="off" placeholder="예: 호텔 / 공항 / 이전 장소" />
+          <div class="place-row">
+            <input id="itemFrom" autocomplete="off" placeholder="직접 입력 또는 지도에서 선택" />
+            <button class="map-pick-btn" type="button" id="pickFromBtn">지도</button>
+          </div>
+          <input type="hidden" id="itemFromCoords" />
+          <input type="hidden" id="itemFromUrl" />
+          <div class="place-meta pending" id="fromMeta">지도 버튼 → 구글맵에서 장소 선택 → 링크 붙여넣기</div>
         </div>
         <div class="field">
           <label for="itemTo" id="itemToLabel">도착지</label>
-          <input id="itemTo" autocomplete="off" placeholder="예: Hotel Europa" />
-          <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">짧은 이름 + 위에 도시명 넣으면 구글맵이 정확히 찾아요</small>
+          <div class="place-row">
+            <input id="itemTo" autocomplete="off" placeholder="직접 입력 또는 지도에서 선택" />
+            <button class="map-pick-btn" type="button" id="pickToBtn">지도</button>
+          </div>
+          <input type="hidden" id="itemToCoords" />
+          <input type="hidden" id="itemToUrl" />
+          <div class="place-meta pending" id="toMeta">지도 버튼 → 구글맵에서 장소 선택 → 링크 붙여넣기</div>
         </div>
       </div>
       <div class="field" id="titleField">
@@ -531,6 +565,26 @@
         <button class="btn btn-primary" type="submit">저장</button>
       </div>
     </form>
+  </div>
+
+  <div class="sheet" id="mapPickSheet" role="dialog" aria-modal="true">
+    <div class="sheet-handle"></div>
+    <h3 id="mapPickTitle">지도에서 장소 선택</h3>
+    <div class="form">
+      <p style="font-size:14px;line-height:1.55;color:var(--ink-soft)">
+        1. 열린 구글맵에서 장소를 검색하고 선택하세요<br />
+        2. <b>공유 → 링크 복사</b><br />
+        3. 아래에 붙여넣고 확인을 누르세요
+      </p>
+      <div class="field">
+        <label for="mapPasteInput">구글맵 링크</label>
+        <textarea id="mapPasteInput" placeholder="https://maps.google.com/... 또는 maps.app.goo.gl/..."></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" id="reopenMapBtn">구글맵 다시 열기</button>
+        <button class="btn btn-primary" type="button" id="confirmMapPickBtn">확인</button>
+      </div>
+    </div>
   </div>
 
   <div class="sheet" id="daySheet" role="dialog" aria-modal="true">
@@ -687,6 +741,8 @@
     let pendingRemote = null;
     let pushTimer = null;
     let applyingRemote = false;
+    let mapPickSide = "from"; // from | to
+    let mapPickQuery = "";
 
     const els = {
       dayTabs: document.getElementById("dayTabs"),
@@ -702,6 +758,7 @@
       itemSheet: document.getElementById("itemSheet"),
       tripSheet: document.getElementById("tripSheet"),
       daySheet: document.getElementById("daySheet"),
+      mapPickSheet: document.getElementById("mapPickSheet"),
       tripsSheet: document.getElementById("tripsSheet"),
       menuSheet: document.getElementById("menuSheet"),
       tripsList: document.getElementById("tripsList"),
@@ -834,7 +891,6 @@
       const from = String(item?.from || "").trim();
       const to = String(item?.to || "").trim();
       const routeName = from && to ? `${from} → ${to}` : "";
-      // 제목이 구간명/장소명과 다르면 도시 힌트로 사용 (예: 리바델가르다)
       if (title && title !== routeName && title !== from && title !== to && title !== item?.place) {
         hints.push(title);
       }
@@ -842,11 +898,104 @@
       return hints;
     }
 
-    function withMapContext(place, item) {
-      const text = String(place || "").trim();
+    // 구글맵 길찾기는 마케팅용 풀네임을 못 찾는 경우가 많음 → 짧은 상호명으로 정리
+    function simplifyPlaceForMaps(place) {
+      let text = String(place || "").trim();
       if (!text || /^https?:\/\//i.test(text)) return text;
+
+      // "Hotel Europa sky pool & panorama" → "Hotel Europa"
+      const hotel = text.match(/^(Hotels?\s+[A-Za-zÀ-ÿ0-9’']+)/i);
+      if (hotel) return hotel[1].trim();
+
+      // "리바 델 가르다 호텔 유로파 ..." 같은 긴 한글명은 앞 3~4단어만
+      if (/[가-힣]/.test(text) && text.length > 24) {
+        return text.split(/\s+/).slice(0, 4).join(" ");
+      }
+
+      // "&", "|" 뒤 수식어 제거
+      text = text.split(/\s*[&|/]\s*/)[0].trim();
+      return text;
+    }
+
+    function withMapContext(place, item) {
+      const raw = String(place || "").trim();
+      if (!raw || /^https?:\/\//i.test(raw)) return raw;
+      const text = simplifyPlaceForMaps(raw);
       const extras = locationHints(item).filter((h) => !text.toLowerCase().includes(h.toLowerCase()));
       return extras.length ? `${text}, ${extras.join(", ")}` : text;
+    }
+
+    function mapEndpoint(item, side) {
+      const coords = side === "from" ? item.fromCoords : item.toCoords;
+      if (coords) return coords;
+      const name = side === "from" ? item.from : item.to;
+      return withMapContext(name, item);
+    }
+
+    function parseGoogleMapsLink(text) {
+      const raw = String(text || "").trim();
+      if (!raw) return null;
+
+      const at = raw.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (at) {
+        let name = `${at[1]},${at[2]}`;
+        const place = raw.match(/\/place\/([^/@]+)/);
+        if (place) {
+          try {
+            name = decodeURIComponent(place[1].replace(/\+/g, " "));
+          } catch {
+            name = place[1].replace(/\+/g, " ");
+          }
+        }
+        return { name, coords: `${at[1]},${at[2]}`, url: raw };
+      }
+
+      const qMatch = raw.match(/[?&](?:q|query)=([^&]+)/i);
+      if (qMatch) {
+        let q = qMatch[1];
+        try { q = decodeURIComponent(q.replace(/\+/g, " ")); } catch { q = q.replace(/\+/g, " "); }
+        const c = q.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/);
+        if (c) return { name: `${c[1]},${c[2]}`, coords: `${c[1]},${c[2]}`, url: raw };
+        return { name: q, coords: null, url: raw };
+      }
+
+      if (/maps\.app\.goo\.gl|goo\.gl\/maps|google\.[^/]+\/maps/i.test(raw)) {
+        return { name: raw, coords: null, url: raw };
+      }
+      return null;
+    }
+
+    function mapsUrl(item) {
+      const custom = (item.mapsQuery || "").trim();
+      if (/^https?:\/\//i.test(custom)) return custom;
+
+      const origin = mapEndpoint(item, "from");
+      const destination = mapEndpoint(item, "to");
+      if (origin && destination) {
+        return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+      }
+
+      const single = destination || origin || withMapContext(item.place || custom || item.title, item);
+      if (!single) return null;
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(single)}`;
+    }
+
+    function mapsButtonLabel(item) {
+      return item.from && item.to ? "길찾기 열기" : "구글맵 열기";
+    }
+
+    function itemSubtitle(item) {
+      if (item.from && item.to) return `${item.from} → ${item.to}`;
+      if (item.to) return item.to;
+      if (item.from) return item.from;
+      return item.place || "";
+    }
+
+    function directionsUrl(fromItem, toItem) {
+      const origin = mapEndpoint(fromItem, "to") || mapEndpoint(fromItem, "from");
+      const dest = mapEndpoint(toItem, "from") || mapEndpoint(toItem, "to");
+      if (!origin || !dest) return null;
+      return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=transit`;
     }
 
     function parseRoute(item) {
@@ -858,47 +1007,6 @@
       const parts = text.split(/\s*(?:->|→|⇒|➜|\/)\s*/).map((p) => p.trim()).filter(Boolean);
       if (parts.length >= 2) return { from: parts[0], to: parts[parts.length - 1] };
       return null;
-    }
-
-    function mapsUrl(item) {
-      const custom = (item.mapsQuery || "").trim();
-      if (/^https?:\/\//i.test(custom)) return custom;
-
-      const route = parseRoute(item);
-      if (route) {
-        const origin = withMapContext(route.from, item);
-        const destination = withMapContext(route.to, item);
-        return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
-      }
-
-      const single = withMapContext(item.to || item.from || item.place || custom || item.title, item);
-      if (!single) return null;
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(single)}`;
-    }
-
-    function mapsButtonLabel(item) {
-      return parseRoute(item) ? "길찾기 열기" : "구글맵 열기";
-    }
-
-    function itemSubtitle(item) {
-      const route = parseRoute(item);
-      if (route) return `${route.from} → ${route.to}`;
-      if (item.to && item.from) return `${item.from} → ${item.to}`;
-      if (item.to) return item.to;
-      if (item.from) return item.from;
-      return item.place || "";
-    }
-
-    function directionsUrl(fromItem, toItem) {
-      const fromRoute = parseRoute(fromItem);
-      const toRoute = parseRoute(toItem);
-      const originRaw = fromRoute?.to || fromItem.to || fromItem.mapsQuery || fromItem.place || fromItem.title;
-      const destRaw = toRoute?.from || toItem.from || toItem.to || toItem.mapsQuery || toItem.place || toItem.title;
-      if (!originRaw || !destRaw) return null;
-      if (/^https?:\/\//i.test(originRaw) || /^https?:\/\//i.test(destRaw)) return null;
-      const origin = withMapContext(originRaw, fromItem);
-      const dest = withMapContext(destRaw, toItem);
-      return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&travelmode=transit`;
     }
 
     function isTransitType(type) {
@@ -989,7 +1097,7 @@
     }
 
     function closeSheets() {
-      [els.itemSheet, els.tripSheet, els.daySheet, els.tripsSheet, els.menuSheet].forEach((s) => s.classList.remove("show"));
+      [els.itemSheet, els.tripSheet, els.daySheet, els.mapPickSheet, els.tripsSheet, els.menuSheet].forEach((s) => s?.classList.remove("show"));
       els.backdrop.classList.remove("show");
       flushPendingRemote();
     }
@@ -998,6 +1106,70 @@
       closeSheets();
       els.backdrop.classList.add("show");
       sheet.classList.add("show");
+    }
+
+    function updatePlaceMeta(side) {
+      const coords = document.getElementById(side === "from" ? "itemFromCoords" : "itemToCoords").value;
+      const meta = document.getElementById(side === "from" ? "fromMeta" : "toMeta");
+      if (!meta) return;
+      if (coords) {
+        meta.textContent = `지도 좌표 연결됨 · ${coords}`;
+        meta.classList.remove("pending");
+      } else {
+        meta.textContent = "지도 버튼 → 구글맵에서 장소 선택 → 링크 붙여넣기";
+        meta.classList.add("pending");
+      }
+    }
+
+    function buildMapSearchUrl(side) {
+      const trip = activeTrip();
+      const typed = document.getElementById(side === "from" ? "itemFrom" : "itemTo").value.trim();
+      const title = document.getElementById("itemTitle").value.trim();
+      const parts = [typed, title, trip?.title].filter(Boolean);
+      const q = parts.join(" ") || trip?.title || "Italy";
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+    }
+
+    function openMapPicker(side) {
+      mapPickSide = side;
+      mapPickQuery = buildMapSearchUrl(side);
+      document.getElementById("mapPickTitle").textContent =
+        side === "from" ? "출발지 · 지도에서 선택" : "도착지 · 지도에서 선택";
+      document.getElementById("mapPasteInput").value = "";
+      window.open(mapPickQuery, "_blank", "noopener");
+      // Keep item sheet data; open picker on top without wiping form via closeSheets
+      [els.tripSheet, els.daySheet, els.tripsSheet, els.menuSheet].forEach((s) => s?.classList.remove("show"));
+      els.itemSheet.classList.remove("show");
+      els.backdrop.classList.add("show");
+      els.mapPickSheet.classList.add("show");
+      setTimeout(() => document.getElementById("mapPasteInput").focus(), 300);
+      toast("구글맵에서 장소 공유 링크를 복사하세요");
+    }
+
+    function applyMapPick(parsed) {
+      if (!parsed) {
+        toast("구글맵 링크를 붙여넣어 주세요");
+        return;
+      }
+      const nameEl = document.getElementById(mapPickSide === "from" ? "itemFrom" : "itemTo");
+      const coordsEl = document.getElementById(mapPickSide === "from" ? "itemFromCoords" : "itemToCoords");
+      const urlEl = document.getElementById(mapPickSide === "from" ? "itemFromUrl" : "itemToUrl");
+
+      // Prefer readable name; if only URL, keep previous typed name when possible
+      if (parsed.name && !/^https?:\/\//i.test(parsed.name)) {
+        nameEl.value = parsed.name;
+      } else if (!nameEl.value.trim() && parsed.url) {
+        nameEl.value = parsed.url;
+      }
+      coordsEl.value = parsed.coords || "";
+      urlEl.value = parsed.url || "";
+      updatePlaceMeta(mapPickSide);
+      syncRouteTitle();
+
+      els.mapPickSheet.classList.remove("show");
+      els.itemSheet.classList.add("show");
+      els.backdrop.classList.add("show");
+      toast(parsed.coords ? "지도 위치가 연결됐어요" : "링크가 저장됐어요 · 좌표는 못 읽었어요");
     }
 
     function escapeHtml(str) {
@@ -1159,11 +1331,17 @@
       }
       document.getElementById("itemFrom").value = from;
       document.getElementById("itemTo").value = to;
+      document.getElementById("itemFromCoords").value = item?.fromCoords || "";
+      document.getElementById("itemToCoords").value = item?.toCoords || "";
+      document.getElementById("itemFromUrl").value = item?.fromUrl || "";
+      document.getElementById("itemToUrl").value = item?.toUrl || "";
       document.getElementById("itemStart").value = item?.start || "";
       document.getElementById("itemEnd").value = item?.end || "";
       document.getElementById("itemTravel").value = item?.travelTime || "";
       document.getElementById("itemMaps").value = item?.mapsQuery || "";
       document.getElementById("itemNote").value = item?.note || "";
+      updatePlaceMeta("from");
+      updatePlaceMeta("to");
       syncItemFormFields();
       openSheet(els.itemSheet);
       setTimeout(() => {
@@ -1369,8 +1547,35 @@
     document.getElementById("importBtn").addEventListener("click", () => els.importFile.click());
     document.getElementById("addTripBtn").addEventListener("click", addTrip);
     document.getElementById("itemType").addEventListener("change", syncItemFormFields);
-    document.getElementById("itemFrom").addEventListener("input", syncRouteTitle);
-    document.getElementById("itemTo").addEventListener("input", syncRouteTitle);
+    document.getElementById("itemFrom").addEventListener("input", () => {
+      // manual edit invalidates pinned coords unless paste sets them again
+      document.getElementById("itemFromCoords").value = "";
+      document.getElementById("itemFromUrl").value = "";
+      updatePlaceMeta("from");
+      syncRouteTitle();
+    });
+    document.getElementById("itemTo").addEventListener("input", () => {
+      document.getElementById("itemToCoords").value = "";
+      document.getElementById("itemToUrl").value = "";
+      updatePlaceMeta("to");
+      syncRouteTitle();
+    });
+    document.getElementById("pickFromBtn").addEventListener("click", () => openMapPicker("from"));
+    document.getElementById("pickToBtn").addEventListener("click", () => openMapPicker("to"));
+    document.getElementById("reopenMapBtn").addEventListener("click", () => {
+      window.open(mapPickQuery || buildMapSearchUrl(mapPickSide), "_blank", "noopener");
+    });
+    document.getElementById("confirmMapPickBtn").addEventListener("click", () => {
+      const pasted = document.getElementById("mapPasteInput").value.trim();
+      applyMapPick(parseGoogleMapsLink(pasted) || (pasted ? { name: pasted, coords: null, url: pasted } : null));
+    });
+    document.getElementById("mapPasteInput").addEventListener("paste", () => {
+      setTimeout(() => {
+        const pasted = document.getElementById("mapPasteInput").value.trim();
+        const parsed = parseGoogleMapsLink(pasted);
+        if (parsed) applyMapPick(parsed);
+      }, 50);
+    });
     els.importFile.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (file) importData(file);
@@ -1395,7 +1600,15 @@
     document.getElementById("cancelItemBtn").addEventListener("click", closeSheets);
     document.getElementById("cancelTripBtn").addEventListener("click", closeSheets);
     document.getElementById("cancelDayBtn").addEventListener("click", closeSheets);
-    els.backdrop.addEventListener("click", closeSheets);
+    els.backdrop.addEventListener("click", () => {
+      if (els.mapPickSheet.classList.contains("show")) {
+        els.mapPickSheet.classList.remove("show");
+        els.itemSheet.classList.add("show");
+        els.backdrop.classList.add("show");
+        return;
+      }
+      closeSheets();
+    });
 
     els.dayForm.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -1469,6 +1682,10 @@
         place: autoTitle || to || from,
         from,
         to,
+        fromCoords: document.getElementById("itemFromCoords").value.trim(),
+        toCoords: document.getElementById("itemToCoords").value.trim(),
+        fromUrl: document.getElementById("itemFromUrl").value.trim(),
+        toUrl: document.getElementById("itemToUrl").value.trim(),
         start: document.getElementById("itemStart").value,
         end: document.getElementById("itemEnd").value,
         travelTime: document.getElementById("itemTravel").value.trim(),
@@ -1546,7 +1763,7 @@
     });
 
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./sw.js?v=13").then((reg) => {
+      navigator.serviceWorker.register("./sw.js?v=15").then((reg) => {
         reg.update();
       }).catch(() => {});
     }
