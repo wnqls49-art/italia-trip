@@ -379,7 +379,15 @@
     }
     .field textarea { min-height: 88px; resize: vertical; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .route-fields { display: grid; gap: 12px; }
+    .route-fields {
+      display: grid !important;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #eef7f8;
+      border: 1px solid #cfe3e8;
+    }
+    .route-fields .field label { color: var(--brand); }
     .form-hidden { display: none !important; }
     .toast {
       position: fixed; left: 50%; bottom: calc(84px + var(--safe-bottom));
@@ -477,10 +485,6 @@
           <option value="note">메모</option>
         </select>
       </div>
-      <div class="field" id="titleField">
-        <label for="itemTitle">제목</label>
-        <input id="itemTitle" placeholder="예: 콜로세움 / 호텔 이름" />
-      </div>
       <div class="field">
         <label for="itemDate">날짜</label>
         <input id="itemDate" type="date" required />
@@ -488,12 +492,16 @@
       <div id="routeFields" class="route-fields">
         <div class="field">
           <label for="itemFrom" id="itemFromLabel">출발지</label>
-          <input id="itemFrom" placeholder="예: 이전 장소 / 출발 공항" />
+          <input id="itemFrom" autocomplete="off" placeholder="예: 호텔 / 공항 / 이전 장소" />
         </div>
         <div class="field">
           <label for="itemTo" id="itemToLabel">도착지</label>
-          <input id="itemTo" placeholder="예: 갈 곳 / 도착 공항" />
+          <input id="itemTo" autocomplete="off" placeholder="예: 관광지 / 식당 / 도착 공항" />
         </div>
+      </div>
+      <div class="field" id="titleField">
+        <label for="itemTitle">제목</label>
+        <input id="itemTitle" placeholder="예: 콜로세움 / 호텔 이름" />
       </div>
       <div class="row-2">
         <div class="field">
@@ -1511,7 +1519,9 @@
     });
 
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./sw.js").catch(() => {});
+      navigator.serviceWorker.register("./sw.js?v=12").then((reg) => {
+        reg.update();
+      }).catch(() => {});
     }
   </script>
 </body>

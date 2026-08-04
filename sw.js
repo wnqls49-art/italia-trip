@@ -1,7 +1,5 @@
-const CACHE = "trip-v11";
+const CACHE = "trip-v12";
 const ASSETS = [
-  "./",
-  "./index.html",
   "./manifest.webmanifest",
   "./icon-180.png",
   "./icon-192.png",
@@ -25,6 +23,28 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
+
+  const url = new URL(req.url);
+  const isPage =
+    req.mode === "navigate" ||
+    url.pathname.endsWith("/") ||
+    url.pathname.endsWith("/index.html") ||
+    url.pathname.endsWith("/sw.js");
+
+  // Always try network first for HTML/SW so form updates show up
+  if (isPage) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req).then((cached) => cached || caches.match("./index.html")))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(req).then((cached) => {
       const fetched = fetch(req)
