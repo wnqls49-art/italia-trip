@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v21</div>
+      <div class="app-label">Trip · v22</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -979,16 +979,15 @@
     }
 
     function locationHints(item) {
-      const trip = activeTrip();
       const hints = [];
       const title = String(item?.title || "").trim();
       const from = String(item?.from || "").trim();
       const to = String(item?.to || "").trim();
       const routeName = from && to ? `${from} → ${to}` : "";
+      // 제목이 도시명일 때만 힌트로 사용 (여행 나라명은 자동 추가하지 않음)
       if (title && title !== routeName && title !== from && title !== to && title !== item?.place) {
         hints.push(title);
       }
-      if (trip?.title) hints.push(trip.title);
       return hints;
     }
 
@@ -1076,6 +1075,16 @@
 
     function mapsButtonLabel(item) {
       return item.from && item.to ? "길찾기 열기" : "구글맵 열기";
+    }
+
+    function itemTimeSortKey(item) {
+      const t = item?.start;
+      if (!t || !/^\d{1,2}:\d{2}$/.test(t)) return 99 * 60 + 99;
+      const [h, m] = t.split(":").map(Number);
+      let minutes = h * 60 + (m || 0);
+      // 새벽(00~05시) 비행은 보통 전날 저녁 이후 연결편 → 하루 뒤로 정렬
+      if (h < 6) minutes += 24 * 60;
+      return minutes;
     }
 
     function itemSubtitle(item) {
@@ -1275,19 +1284,7 @@
         variants.add("Firenze Santa Maria Novella");
       }
 
-      const trip = activeTrip();
-      if (trip?.title) {
-        let tripLatin = trip.title;
-        for (const [re, rep] of KO_PLACE_MAP) tripLatin = tripLatin.replace(re, rep);
-        variants.add(`${latin || q} ${tripLatin}`.trim());
-        variants.add(`${latin || q} ${trip.title}`.trim());
-      }
-
-      // 한글만 있고 변환이 거의 안 됐으면 Italy 힌트 추가
-      if (/[가-힣]/.test(q) && latin === q) {
-        variants.add(`${q} Italy`);
-      }
-
+      // 여행 이름(이탈리아 등)은 자동으로 붙이지 않음 — 사용자가 직접 입력한 것만 검색
       return [...variants].filter(Boolean);
     }
 
@@ -1303,8 +1300,8 @@
       mapPickSide = side;
       const typed = document.getElementById(side === "from" ? "itemFrom" : "itemTo").value.trim();
       const title = document.getElementById("itemTitle").value.trim();
-      const trip = activeTrip();
-      const preset = typed || [title, trip?.title].filter(Boolean).join(" ");
+      // 입력칸/도시 제목만 사용. 여행명(이탈리아)은 넣지 않음
+      const preset = typed || title || "";
       document.getElementById("mapPickTitle").textContent =
         side === "from" ? "출발지 · 지도에서 선택" : "도착지 · 지도에서 선택";
       document.getElementById("mapSearchInput").value = preset;
@@ -1493,7 +1490,7 @@
         return;
       }
 
-      const sorted = [...day.items].sort((a, b) => (a.start || "99:99").localeCompare(b.start || "99:99"));
+      const sorted = [...day.items].sort((a, b) => itemTimeSortKey(a) - itemTimeSortKey(b));
       els.timeline.innerHTML = sorted
         .map((item, index) => {
           const next = sorted[index + 1];
@@ -2015,9 +2012,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v21").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v22").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v21.js");
+        return navigator.serviceWorker.register("./sw.v22.js");
       }).catch(() => {});
     }
   </script>
