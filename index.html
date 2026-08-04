@@ -475,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v20</div>
+      <div class="app-label">Trip · v21</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -1456,9 +1456,11 @@
       els.dayTabs.innerHTML = trip.days
         .map((day, idx) => {
           const active = day.id === trip.activeDayId ? "active" : "";
+          const label = `Day ${idx + 1}`;
+          day.label = label;
           return `
             <button class="day-tab ${active}" type="button" data-day="${day.id}">
-              <strong>${day.label || `Day ${idx + 1}`}</strong>
+              <strong>${label}</strong>
               <span>${formatDateLabel(day.date)}</span>
             </button>
           `;
@@ -1471,7 +1473,9 @@
         return;
       }
 
-      els.dayHeading.textContent = day.label || "Day";
+      const dayIndex = Math.max(0, trip.days.findIndex((d) => d.id === day.id));
+      day.label = `Day ${dayIndex + 1}`;
+      els.dayHeading.textContent = day.label;
       els.dayCount.textContent = `${day.items.length}개 일정`;
       if (els.editDayDateBtn) {
         els.editDayDateBtn.textContent = day.date ? formatDateLabel(day.date) : "날짜 선택";
@@ -1625,6 +1629,12 @@
       }
       openSheet(els.daySheet);
       setTimeout(() => document.getElementById("dayDate").focus(), 220);
+    }
+
+    function renumberDays(trip = activeTrip()) {
+      (trip?.days || []).forEach((day, idx) => {
+        day.label = `Day ${idx + 1}`;
+      });
     }
 
     function syncTripDateRange() {
@@ -1857,9 +1867,10 @@
       }
 
       if (dayEditorMode === "add") {
-        const day = { id: uid(), label, date, items: [] };
+        const day = { id: uid(), label: `Day ${trip.days.length + 1}`, date, items: [] };
         trip.days.push(day);
         trip.activeDayId = day.id;
+        renumberDays(trip);
         syncTripDateRange();
         save();
         closeSheets();
@@ -1870,8 +1881,8 @@
 
       const day = activeDay();
       if (!day) return;
-      day.label = label;
       day.date = date;
+      renumberDays(trip);
       syncTripDateRange();
       save();
       closeSheets();
@@ -2004,9 +2015,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v20").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v21").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v20.js");
+        return navigator.serviceWorker.register("./sw.v21.js");
       }).catch(() => {});
     }
   </script>
