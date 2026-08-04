@@ -390,21 +390,49 @@
     .route-fields .field label { color: var(--brand); }
     .place-row {
       display: grid;
-      grid-template-columns: 1fr auto;
       gap: 8px;
-      align-items: center;
     }
     .map-pick-btn {
-      flex: 0 0 auto;
-      min-height: 46px;
-      min-width: 64px;
+      min-height: 44px;
+      width: 100%;
       padding: 0 12px;
       border-radius: 12px;
       background: var(--brand);
       color: #fff;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
-      white-space: nowrap;
+    }
+    .map-search-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+    .map-results {
+      display: grid;
+      gap: 8px;
+      max-height: 45vh;
+      overflow: auto;
+      margin-top: 4px;
+    }
+    .map-result {
+      text-align: left;
+      padding: 12px;
+      border-radius: 12px;
+      background: #f5f9fa;
+      border: 1px solid var(--line);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+    .map-result small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 12px;
+    }
+    .sheet.map-sheet {
+      max-height: min(94vh, 900px);
     }
     .place-meta {
       font-size: 11px;
@@ -447,7 +475,7 @@
 <body>
   <div class="app">
     <header class="hero">
-      <div class="app-label">Trip · v16</div>
+      <div class="app-label">Trip · v17</div>
       <div class="brand" id="tripBrand">새 여행</div>
       <p id="tripSubtitle">나라별로 여행을 만들고 일정을 쌓아보세요.</p>
       <div class="hero-meta">
@@ -516,23 +544,19 @@
       <div id="routeFields" class="route-fields">
         <div class="field">
           <label for="itemFrom" id="itemFromLabel">출발지</label>
-          <div class="place-row">
-            <input id="itemFrom" autocomplete="off" placeholder="직접 입력 또는 지도에서 선택" />
-            <button class="map-pick-btn" type="button" id="pickFromBtn">지도</button>
-          </div>
+          <input id="itemFrom" autocomplete="off" placeholder="직접 입력 또는 아래에서 지도 선택" />
+          <button class="map-pick-btn" type="button" id="pickFromBtn">지도에서 선택</button>
           <input type="hidden" id="itemFromCoords" />
           <input type="hidden" id="itemFromUrl" />
-          <div class="place-meta pending" id="fromMeta">지도 버튼 → 구글맵에서 장소 선택 → 링크 붙여넣기</div>
+          <div class="place-meta pending" id="fromMeta">지도에서 선택하면 길찾기가 정확해져요</div>
         </div>
         <div class="field">
           <label for="itemTo" id="itemToLabel">도착지</label>
-          <div class="place-row">
-            <input id="itemTo" autocomplete="off" placeholder="직접 입력 또는 지도에서 선택" />
-            <button class="map-pick-btn" type="button" id="pickToBtn">지도</button>
-          </div>
+          <input id="itemTo" autocomplete="off" placeholder="직접 입력 또는 아래에서 지도 선택" />
+          <button class="map-pick-btn" type="button" id="pickToBtn">지도에서 선택</button>
           <input type="hidden" id="itemToCoords" />
           <input type="hidden" id="itemToUrl" />
-          <div class="place-meta pending" id="toMeta">지도 버튼 → 구글맵에서 장소 선택 → 링크 붙여넣기</div>
+          <div class="place-meta pending" id="toMeta">지도에서 선택하면 길찾기가 정확해져요</div>
         </div>
       </div>
       <div class="field" id="titleField">
@@ -568,22 +592,22 @@
     </form>
   </div>
 
-  <div class="sheet" id="mapPickSheet" role="dialog" aria-modal="true">
+  <div class="sheet map-sheet" id="mapPickSheet" role="dialog" aria-modal="true">
     <div class="sheet-handle"></div>
-    <h3 id="mapPickTitle">지도에서 장소 선택</h3>
+    <h3 id="mapPickTitle">지도에서 선택</h3>
     <div class="form">
-      <p style="font-size:14px;line-height:1.55;color:var(--ink-soft)">
-        1. 열린 구글맵에서 장소를 검색하고 선택하세요<br />
-        2. <b>공유 → 링크 복사</b><br />
-        3. 아래에 붙여넣고 확인을 누르세요
-      </p>
       <div class="field">
-        <label for="mapPasteInput">구글맵 링크</label>
-        <textarea id="mapPasteInput" placeholder="https://maps.google.com/... 또는 maps.app.goo.gl/..."></textarea>
+        <label for="mapSearchInput">장소 검색</label>
+        <div class="map-search-row">
+          <input id="mapSearchInput" placeholder="예: Hotel Europa Riva del Garda" />
+          <button class="map-pick-btn" type="button" id="mapSearchBtn" style="width:auto;min-width:72px">검색</button>
+        </div>
+      </div>
+      <div class="map-results" id="mapSearchResults">
+        <div class="place-meta pending">도시 이름까지 같이 검색하면 정확해요</div>
       </div>
       <div class="actions">
-        <button class="btn btn-ghost" type="button" id="reopenMapBtn">구글맵 다시 열기</button>
-        <button class="btn btn-primary" type="button" id="confirmMapPickBtn">확인</button>
+        <button class="btn btn-ghost" type="button" id="cancelMapPickBtn">취소</button>
       </div>
     </div>
   </div>
@@ -1114,63 +1138,100 @@
       const meta = document.getElementById(side === "from" ? "fromMeta" : "toMeta");
       if (!meta) return;
       if (coords) {
-        meta.textContent = `지도 좌표 연결됨 · ${coords}`;
+        meta.textContent = `지도에서 선택됨 · ${coords}`;
         meta.classList.remove("pending");
       } else {
-        meta.textContent = "지도 버튼 → 구글맵에서 장소 선택 → 링크 붙여넣기";
+        meta.textContent = "지도에서 선택하면 길찾기가 정확해져요";
         meta.classList.add("pending");
       }
     }
 
-    function buildMapSearchUrl(side) {
-      const trip = activeTrip();
-      const typed = document.getElementById(side === "from" ? "itemFrom" : "itemTo").value.trim();
-      const title = document.getElementById("itemTitle").value.trim();
-      const parts = [typed, title, trip?.title].filter(Boolean);
-      const q = parts.join(" ") || trip?.title || "Italy";
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-    }
-
     function openMapPicker(side) {
       mapPickSide = side;
-      mapPickQuery = buildMapSearchUrl(side);
+      const typed = document.getElementById(side === "from" ? "itemFrom" : "itemTo").value.trim();
+      const title = document.getElementById("itemTitle").value.trim();
+      const trip = activeTrip();
+      const preset = [typed, title, trip?.title].filter(Boolean).join(" ");
       document.getElementById("mapPickTitle").textContent =
         side === "from" ? "출발지 · 지도에서 선택" : "도착지 · 지도에서 선택";
-      document.getElementById("mapPasteInput").value = "";
-      window.open(mapPickQuery, "_blank", "noopener");
-      // Keep item sheet data; open picker on top without wiping form via closeSheets
+      document.getElementById("mapSearchInput").value = preset;
+      document.getElementById("mapSearchResults").innerHTML =
+        `<div class="place-meta pending">검색어를 입력하고 검색을 누르세요</div>`;
+
       [els.tripSheet, els.daySheet, els.tripsSheet, els.menuSheet].forEach((s) => s?.classList.remove("show"));
       els.itemSheet.classList.remove("show");
       els.backdrop.classList.add("show");
       els.mapPickSheet.classList.add("show");
-      setTimeout(() => document.getElementById("mapPasteInput").focus(), 300);
-      toast("구글맵에서 장소 공유 링크를 복사하세요");
+      setTimeout(() => {
+        document.getElementById("mapSearchInput").focus();
+        if (preset) runPlaceSearch();
+      }, 200);
+    }
+
+    function formatPhotonLabel(props) {
+      const name = props.name || props.street || props.city || "선택한 장소";
+      const parts = [props.street, props.city || props.county, props.state, props.country]
+        .filter(Boolean)
+        .filter((p, i, arr) => arr.indexOf(p) === i && p !== name);
+      return { name, detail: parts.join(", ") };
+    }
+
+    async function runPlaceSearch() {
+      const box = document.getElementById("mapSearchResults");
+      const q = document.getElementById("mapSearchInput").value.trim();
+      if (!q) {
+        box.innerHTML = `<div class="place-meta pending">검색어를 입력해 주세요</div>`;
+        return;
+      }
+      box.innerHTML = `<div class="place-meta pending">검색 중…</div>`;
+      try {
+        const url = `https://photon.komoot.io/api/?lang=en&limit=8&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("search failed");
+        const data = await res.json();
+        const features = data.features || [];
+        if (!features.length) {
+          box.innerHTML = `<div class="place-meta pending">결과가 없어요 · 도시 이름을 같이 넣어보세요</div>`;
+          return;
+        }
+        box.innerHTML = features
+          .map((f, idx) => {
+            const [lng, lat] = f.geometry.coordinates;
+            const { name, detail } = formatPhotonLabel(f.properties || {});
+            return `<button type="button" class="map-result" data-idx="${idx}" data-lat="${lat}" data-lng="${lng}" data-name="${encodeURIComponent(name)}">
+              ${escapeHtml(name)}
+              <small>${escapeHtml(detail || `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`)}</small>
+            </button>`;
+          })
+          .join("");
+      } catch {
+        box.innerHTML = `<div class="place-meta pending">검색 실패 · 잠시 후 다시 시도해 주세요</div>`;
+      }
     }
 
     function applyMapPick(parsed) {
-      if (!parsed) {
-        toast("구글맵 링크를 붙여넣어 주세요");
+      if (!parsed?.name) {
+        toast("장소를 선택해 주세요");
         return;
       }
       const nameEl = document.getElementById(mapPickSide === "from" ? "itemFrom" : "itemTo");
       const coordsEl = document.getElementById(mapPickSide === "from" ? "itemFromCoords" : "itemToCoords");
       const urlEl = document.getElementById(mapPickSide === "from" ? "itemFromUrl" : "itemToUrl");
-
-      // Prefer readable name; if only URL, keep previous typed name when possible
-      if (parsed.name && !/^https?:\/\//i.test(parsed.name)) {
-        nameEl.value = parsed.name;
-      } else if (!nameEl.value.trim() && parsed.url) {
-        nameEl.value = parsed.url;
-      }
+      nameEl.value = parsed.name;
       coordsEl.value = parsed.coords || "";
       urlEl.value = parsed.url || "";
       updatePlaceMeta(mapPickSide);
       syncRouteTitle();
-
       els.mapPickSheet.classList.remove("show");
       els.itemSheet.classList.add("show");
       els.backdrop.classList.add("show");
-      toast(parsed.coords ? "지도 위치가 연결됐어요" : "링크가 저장됐어요 · 좌표는 못 읽었어요");
+      toast("장소가 선택됐어요");
+    }
+
+    function returnToItemSheet() {
+      els.mapPickSheet.classList.remove("show");
+      els.itemSheet.classList.add("show");
+      els.backdrop.classList.add("show");
     }
 
     function escapeHtml(str) {
@@ -1563,20 +1624,28 @@
     });
     document.getElementById("pickFromBtn").addEventListener("click", () => openMapPicker("from"));
     document.getElementById("pickToBtn").addEventListener("click", () => openMapPicker("to"));
-    document.getElementById("reopenMapBtn").addEventListener("click", () => {
-      window.open(mapPickQuery || buildMapSearchUrl(mapPickSide), "_blank", "noopener");
+    document.getElementById("mapSearchBtn").addEventListener("click", runPlaceSearch);
+    document.getElementById("mapSearchInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        runPlaceSearch();
+      }
     });
-    document.getElementById("confirmMapPickBtn").addEventListener("click", () => {
-      const pasted = document.getElementById("mapPasteInput").value.trim();
-      applyMapPick(parseGoogleMapsLink(pasted) || (pasted ? { name: pasted, coords: null, url: pasted } : null));
+    document.getElementById("mapSearchResults").addEventListener("click", (e) => {
+      const btn = e.target.closest(".map-result");
+      if (!btn) return;
+      const lat = btn.dataset.lat;
+      const lng = btn.dataset.lng;
+      let name = btn.dataset.name || "";
+      try { name = decodeURIComponent(name); } catch {}
+      if (!name) name = btn.textContent.trim();
+      applyMapPick({
+        name,
+        coords: `${lat},${lng}`,
+        url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+      });
     });
-    document.getElementById("mapPasteInput").addEventListener("paste", () => {
-      setTimeout(() => {
-        const pasted = document.getElementById("mapPasteInput").value.trim();
-        const parsed = parseGoogleMapsLink(pasted);
-        if (parsed) applyMapPick(parsed);
-      }, 50);
-    });
+    document.getElementById("cancelMapPickBtn").addEventListener("click", returnToItemSheet);
     els.importFile.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (file) importData(file);
@@ -1603,9 +1672,7 @@
     document.getElementById("cancelDayBtn").addEventListener("click", closeSheets);
     els.backdrop.addEventListener("click", () => {
       if (els.mapPickSheet.classList.contains("show")) {
-        els.mapPickSheet.classList.remove("show");
-        els.itemSheet.classList.add("show");
-        els.backdrop.classList.add("show");
+        returnToItemSheet();
         return;
       }
       closeSheets();
@@ -1769,9 +1836,9 @@
         await Promise.all(regs.map((r) => r.unregister()));
         if ("caches" in window) {
           const keys = await caches.keys();
-          await Promise.all(keys.filter((k) => k !== "trip-v16").map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => k !== "trip-v17").map((k) => caches.delete(k)));
         }
-        return navigator.serviceWorker.register("./sw.v16.js");
+        return navigator.serviceWorker.register("./sw.v17.js");
       }).catch(() => {});
     }
   </script>
