@@ -477,7 +477,7 @@
           <option value="note">메모</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field" id="titleField">
         <label for="itemTitle">제목</label>
         <input id="itemTitle" required placeholder="예: 콜로세움" />
       </div>
@@ -872,14 +872,35 @@
       const isRoute = type === "flight" || type === "train";
       const routeFields = document.getElementById("routeFields");
       const placeField = document.getElementById("placeField");
+      const titleField = document.getElementById("titleField");
       routeFields.classList.toggle("form-hidden", !isRoute);
       placeField.classList.toggle("form-hidden", isRoute);
+      titleField.classList.toggle("form-hidden", isRoute);
+      document.getElementById("itemTitle").required = !isRoute;
       document.getElementById("itemFrom").required = isRoute;
       document.getElementById("itemTo").required = isRoute;
       document.getElementById("itemStartLabel").textContent = isRoute ? "출발 시간" : "시작";
       document.getElementById("itemEndLabel").textContent = isRoute ? "도착 시간" : "종료";
       document.getElementById("itemFromLabel").textContent = type === "train" ? "출발역" : "출발지";
       document.getElementById("itemToLabel").textContent = type === "train" ? "도착역" : "도착지";
+      if (isRoute) syncRouteTitle();
+    }
+
+    function syncRouteTitle() {
+      const type = document.getElementById("itemType").value;
+      if (type !== "flight" && type !== "train") return;
+      const from = document.getElementById("itemFrom").value.trim();
+      const to = document.getElementById("itemTo").value.trim();
+      const titleEl = document.getElementById("itemTitle");
+      if (from && to) titleEl.value = `${from} → ${to}`;
+      else if (from) titleEl.value = from;
+      else if (to) titleEl.value = to;
+      else titleEl.value = "";
+    }
+
+    function routeTitle(from, to, fallback = "") {
+      if (from && to) return `${from} → ${to}`;
+      return fallback || from || to || "";
     }
 
     function ensureDayForDate(dateStr) {
@@ -1288,6 +1309,8 @@
     document.getElementById("importBtn").addEventListener("click", () => els.importFile.click());
     document.getElementById("addTripBtn").addEventListener("click", addTrip);
     document.getElementById("itemType").addEventListener("change", syncItemFormFields);
+    document.getElementById("itemFrom").addEventListener("input", syncRouteTitle);
+    document.getElementById("itemTo").addEventListener("input", syncRouteTitle);
     els.importFile.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (file) importData(file);
@@ -1365,13 +1388,16 @@
         return;
       }
       const place = document.getElementById("itemPlace").value.trim();
+      const autoTitle = routeTitle(from, to);
       const payload = {
         id: editingItemId || uid(),
         type,
-        title: document.getElementById("itemTitle").value.trim(),
+        title: (type === "flight" || type === "train")
+          ? autoTitle
+          : document.getElementById("itemTitle").value.trim(),
         date: itemDate,
         place: type === "flight" || type === "train"
-          ? (from && to ? `${from} → ${to}` : place)
+          ? autoTitle
           : place,
         from: type === "flight" || type === "train" ? from : "",
         to: type === "flight" || type === "train" ? to : "",
@@ -1382,7 +1408,10 @@
         note: document.getElementById("itemNote").value.trim(),
       };
 
-      if (!payload.title) return;
+      if (!payload.title) {
+        toast("제목을 입력해 주세요");
+        return;
+      }
 
       // Move item off old day if editing and changing date
       if (editingItemId) {
